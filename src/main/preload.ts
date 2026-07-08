@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import {
+import type {
   EmulatorConfig,
   EmulatorState,
   GameEntry,
   SystemInfo,
   AppSettings,
+  InstallProgress,
+  ConfigPreset,
 } from '../shared/types';
 
 const api = {
@@ -18,8 +20,33 @@ const api = {
     states: (): Promise<EmulatorState[]> => ipcRenderer.invoke('emulators:states'),
     check: (id: string): Promise<EmulatorState> =>
       ipcRenderer.invoke('emulators:check', id),
-    openInstallUrl: (id: string): Promise<string | null> =>
-      ipcRenderer.invoke('emulators:install-url', id),
+
+    /** Download + install emulator directly. Returns final EmulatorState */
+    install: (id: string): Promise<EmulatorState> =>
+      ipcRenderer.invoke('emulators:install', id),
+
+    /** Apply recommended config preset to an installed emulator */
+    configure: (id: string, installPath: string): Promise<{ success: boolean; state: EmulatorState }> =>
+      ipcRenderer.invoke('emulators:configure', id, installPath),
+
+    /** Get available config presets for an emulator */
+    presets: (id: string): Promise<ConfigPreset[]> =>
+      ipcRenderer.invoke('emulators:presets', id),
+
+    /** Check if an emulator has been configured */
+    configured: (id: string, installPath?: string): Promise<boolean> =>
+      ipcRenderer.invoke('emulators:configured', id, installPath),
+
+    /** Open the emulator's website in browser (fallback) */
+    openWebsite: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke('emulators:open-website', id),
+
+    /** Listen for install progress updates */
+    onInstallProgress: (cb: (progress: InstallProgress) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, p: InstallProgress) => cb(p);
+      ipcRenderer.on('emulators:install-progress', handler);
+      return () => ipcRenderer.removeListener('emulators:install-progress', handler);
+    },
   },
 
   roms: {

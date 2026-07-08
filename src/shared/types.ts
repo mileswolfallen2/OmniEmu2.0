@@ -1,15 +1,55 @@
 export type Platform = 'win32' | 'darwin' | 'linux';
 export type Arch = 'x64' | 'arm64';
 
+export interface EmulatorDownload {
+  url: string;
+  /** Archive type: 'exe' = direct installer, 'msi' = windows msi,
+   *  'dmg' = macOS disk image, 'appimage' = linux appimage,
+   *  'tar.gz' | 'tar.bz2' | 'zip' = archive to extract,
+   *  'pkg' = macOS installer, '7z' = 7zip archive */
+  format: string;
+  /** Path inside archive to the executable (if archive format) */
+  executablePath?: string;
+  /** Expected file size in bytes (for validation) */
+  size?: number;
+  /** Only for this arch (omitted = all arches) */
+  arch?: Arch;
+}
+
 export interface EmulatorConfig {
   id: string;
   name: string;
   description: string;
   platforms: string[];
   defaultPath: Record<Platform, string>;
-  installUrl: Record<Platform, string | null>;
-  installVia: 'download' | 'brew' | 'apt' | 'winget' | 'manual';
+  /** Direct download sources per platform */
+  downloads: Partial<Record<Platform, EmulatorDownload[]>>;
+  /** Package manager names for auto-install via system pkg manager */
+  packageNames?: Partial<Record<Platform, string>>;
   supported: boolean;
+  /** URL to fetch recommended config presets from */
+  presetUrl?: string;
+  /** Website URL for manual/fallback */
+  websiteUrl?: Record<Platform, string>;
+}
+
+export interface InstallProgress {
+  emulatorId: string;
+  stage: 'downloading' | 'extracting' | 'installing' | 'configuring' | 'done' | 'error';
+  percent: number;
+  message: string;
+  error?: string;
+}
+
+export interface ConfigPreset {
+  /** Name of the preset (e.g. "Performance", "Quality", "Recommended") */
+  name: string;
+  /** Description of what this preset does */
+  description: string;
+  /** Platform-specific config files to write: relative path -> file content */
+  files: Record<string, string>;
+  /** Registry/settings changes for Windows */
+  registry?: Record<string, string>;
 }
 
 export interface RomFile {
@@ -46,6 +86,8 @@ export interface AppSettings {
   minimiseToTray: boolean;
   launchInFullscreen: boolean;
   closeToTray: boolean;
+  /** URL to fetch recommended config presets from */
+  presetSourceUrl: string;
 }
 
 export interface SystemInfo {
@@ -60,4 +102,5 @@ export interface EmulatorState {
   version?: string;
   path?: string;
   config: EmulatorConfig;
+  configured: boolean;
 }

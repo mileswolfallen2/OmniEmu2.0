@@ -2,7 +2,6 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { app } from 'electron';
 import { AppSettings } from '../shared/types';
-import { getPlatform } from './platform';
 
 const SETTINGS_FILE = 'settings.json';
 
@@ -17,6 +16,7 @@ const defaultSettings: AppSettings = {
   minimiseToTray: true,
   launchInFullscreen: false,
   closeToTray: true,
+  presetSourceUrl: 'https://raw.githubusercontent.com/mileswolfallen2/omniemu-presets/main/presets.json',
 };
 
 let cached: AppSettings | null = null;

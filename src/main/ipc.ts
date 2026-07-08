@@ -1,16 +1,19 @@
-import { ipcMain, shell, dialog } from 'electron';
+import { ipcMain, shell, dialog, BrowserWindow } from 'electron';
 import {
   getAllEmulatorStates,
   checkEmulator,
   launchGame,
   scanRoms,
   knownEmulators,
+  findEmulator,
   getRomsDirectory,
   getEmulatorsDirectory,
 } from './emulators';
+import { installEmulator } from './installer';
+import { applyRecommendedConfig, getPresets, checkConfigured } from './configurator';
 import { settings } from './settings';
-import { getSystemInfo, platformName } from './platform';
-import { GameEntry, AppSettings } from '../shared/types';
+import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
+import { InstallProgress, AppSettings } from '../shared/types';
 
 export function registerIpcHandlers(): void {
   // System
@@ -21,15 +24,66 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('emulators:list', () => knownEmulators);
   ipcMain.handle('emulators:states', () => getAllEmulatorStates());
   ipcMain.handle('emulators:check', (_event, id: string) => checkEmulator(id));
-  ipcMain.handle('emulators:install-url', (_event, id: string) => {
-    const emu = knownEmulators.find((e) => e.id === id);
-    if (emu?.installUrl) {
-      const platform = getSystemInfo().platform;
-      const url = emu.installUrl[platform];
-      if (url) shell.openExternal(url);
-      return url;
+
+  // Install emulator - direct download + install
+  ipcMain.handle(
+    'emulators:install',
+    async (event, emulatorId: string) => {
+      const config = findEmulator(emulatorId);
+      if (!config) throw new Error(`Unknown emulator: ${emulatorId}`);
+      if (!config.downloads) throw new Error(`No downloads configured for ${emulatorId}`);
+
+      const platform = getPlatform();
+      const arch = getArch();
+      const downloads = config.downloads[platform];
+      if (!downloads || downloads.length === 0)
+        throw new Error(`No downloads available for ${emulatorId} on ${platform}`);
+
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const sendProgress = (p: InstallProgress) => {
+        win?.webContents.send('emulators:install-progress', p);
+      };
+
+      await installEmulator(emulatorId, downloads, platform, arch, sendProgress);
+
+      // Re-check state after install
+      return checkEmulator(emulatorId);
     }
-    return null;
+  );
+
+  // Configure emulator with recommended settings
+  ipcMain.handle(
+    'emulators:configure',
+    async (_event, emulatorId: string, installPath: string) => {
+      const success = await applyRecommendedConfig(emulatorId, installPath);
+      return { success, state: checkEmulator(emulatorId) };
+    }
+  );
+
+  // Get available presets for an emulator
+  ipcMain.handle(
+    'emulators:presets',
+    async (_event, emulatorId: string) => {
+      return getPresets(emulatorId);
+    }
+  );
+
+  // Check if configured
+  ipcMain.handle(
+    'emulators:configured',
+    (_event, emulatorId: string, installPath?: string) => {
+      return checkConfigured(emulatorId, installPath);
+    }
+  );
+
+  // Open website (fallback for manual download)
+  ipcMain.handle('emulators:open-website', (_event, id: string) => {
+    const emu = findEmulator(id);
+    if (emu?.websiteUrl?.[getPlatform()]) {
+      shell.openExternal(emu.websiteUrl[getPlatform()]!);
+      return true;
+    }
+    return false;
   });
 
   // ROMs / Games
