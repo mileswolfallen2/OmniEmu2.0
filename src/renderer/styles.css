@@ -271,6 +271,17 @@ html, body, #root {
   color: var(--text-primary);
 }
 
+.btn-danger {
+  background: color-mix(in srgb, var(--error) 20%, transparent);
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+.btn-danger:hover {
+  background: var(--error);
+  color: #fff;
+}
+
 /* Game library */
 .library-grid {
   display: grid;
@@ -537,4 +548,159 @@ select:focus, input[type="text"]:focus {
 .empty-state p {
   font-size: 14px;
   margin-top: 8px;
+}
+
+/* Controller */
+.controller-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.controller-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  min-width: 56px;
+  transition: all var(--transition);
+}
+
+.controller-btn.pressed {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(108, 99, 255, 0.4);
+}
+
+.controller-btn-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.controller-btn-value {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.controller-btn.pressed .controller-btn-value {
+  color: var(--accent);
+}
+
+.controller-axes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.axis-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.axis-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 44px;
+}
+
+.axis-track {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  position: relative;
+  overflow: visible;
+}
+
+.axis-fill {
+  position: absolute;
+  top: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  transition: left 50ms linear;
+}
+
+.axis-value {
+  font-size: 10px;
+  color: var(--text-muted);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* BIOS */
+.bios-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bios-entry {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.bios-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.bios-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bios-indicator.present {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--success);
+}
+
+.bios-indicator.missing {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--error);
+}
+
+.bios-entry-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bios-entry-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bios-file {
+  font-size: 10px;
+  font-family: monospace;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.bios-file.found {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--success);
 }

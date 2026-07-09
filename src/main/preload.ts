@@ -25,6 +25,14 @@ const api = {
     install: (id: string): Promise<EmulatorState> =>
       ipcRenderer.invoke('emulators:install', id),
 
+    /** Launch emulator standalone (no ROM) */
+    launch: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke('emulators:launch', id),
+
+    /** Uninstall an emulator */
+    uninstall: (id: string): Promise<{ removed: boolean; state: EmulatorState }> =>
+      ipcRenderer.invoke('emulators:uninstall', id),
+
     /** Apply recommended config preset to an installed emulator */
     configure: (id: string, installPath: string): Promise<{ success: boolean; state: EmulatorState }> =>
       ipcRenderer.invoke('emulators:configure', id, installPath),
@@ -40,6 +48,10 @@ const api = {
     /** Open the emulator's website in browser (fallback) */
     openWebsite: (id: string): Promise<boolean> =>
       ipcRenderer.invoke('emulators:open-website', id),
+
+    /** Apply controller config to an installed emulator */
+    updateControllerConfig: (id: string, installPath: string, controllerName?: string): Promise<boolean> =>
+      ipcRenderer.invoke('emulators:update-controller-config', id, installPath, controllerName),
 
     /** Listen for install progress updates */
     onInstallProgress: (cb: (progress: InstallProgress) => void) => {
@@ -59,6 +71,20 @@ const api = {
   game: {
     launch: (emulatorId: string, romPath: string): Promise<boolean> =>
       ipcRenderer.invoke('game:launch', emulatorId, romPath),
+    recent: (): Promise<GameEntry[]> => ipcRenderer.invoke('games:recent'),
+    clearRecent: (): Promise<boolean> => ipcRenderer.invoke('games:clear-recent'),
+    scrapeArt: (title: string, platform: string): Promise<string | undefined> =>
+      ipcRenderer.invoke('games:scrape-art', title, platform),
+  },
+
+  bios: {
+    listKnown: (): Promise<any[]> => ipcRenderer.invoke('bios:list-known'),
+    scan: (directory?: string): Promise<any[]> =>
+      ipcRenderer.invoke('bios:scan', directory),
+    selectDirectory: (): Promise<string | null> =>
+      ipcRenderer.invoke('bios:select-directory'),
+    configureRetroArch: (configDir: string, biosDir: string): Promise<boolean> =>
+      ipcRenderer.invoke('bios:configure-retroarch', configDir, biosDir),
   },
 
   settings: {

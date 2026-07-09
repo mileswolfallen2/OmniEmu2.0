@@ -17,6 +17,8 @@ const defaultSettings: AppSettings = {
   launchInFullscreen: false,
   closeToTray: true,
   presetSourceUrl: 'https://raw.githubusercontent.com/mileswolfallen2/omniemu-presets/main/presets.json',
+  recentGames: [],
+  biosDirectory: '',
 };
 
 let cached: AppSettings | null = null;

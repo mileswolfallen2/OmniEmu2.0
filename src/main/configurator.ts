@@ -74,10 +74,10 @@ CPU:
       },
     },
   ],
-  ryujinx: [
+  eden: [
     {
       name: 'OmniEmu Recommended',
-      description: 'Best settings for Ryujinx Switch emulation',
+      description: 'Best settings for Eden Switch emulation',
       files: {
         'Config.json': `{
   "graphics_backend": "Vulkan",
@@ -153,6 +153,29 @@ autosave 0
       },
     },
   ],
+  duckstation: [
+    {
+      name: 'OmniEmu Recommended',
+      description: 'Optimal DuckStation settings for PS1 emulation',
+      files: {
+        'settings.ini': `[General]
+UserMode = 0
+StartFullscreen = True
+[Display]
+RenderToMain = True
+Fullscreen = True
+VSync = True
+[GPU]
+Renderer = Vulkan
+ResolutionScale = 3
+Multisamples = 1
+PGXPEnable = True
+PGXPCulling = True
+WidescreenHack = True
+`,
+      },
+    },
+  ],
 };
 
 const presetSourceUrl = 'https://raw.githubusercontent.com/mileswolfallen2/omniemu-presets/main/presets.json';
@@ -199,11 +222,6 @@ function getConfigDir(emulatorId: string, installPath: string): string {
       darwin: join(require('os').homedir(), 'Library', 'Application Support', 'rpcs3'),
       linux: join(require('os').homedir(), '.config', 'rpcs3'),
     },
-    ryujinx: {
-      win32: join(process.env.APPDATA || '', 'Ryujinx'),
-      darwin: join(require('os').homedir(), 'Library', 'Application Support', 'Ryujinx'),
-      linux: join(require('os').homedir(), '.config', 'Ryujinx'),
-    },
     pcsx2: {
       win32: join(process.env.APPDATA || '', 'PCSX2'),
       darwin: join(require('os').homedir(), 'Library', 'Application Support', 'PCSX2'),
@@ -218,6 +236,16 @@ function getConfigDir(emulatorId: string, installPath: string): string {
       win32: dirname(installPath),
       darwin: dirname(installPath),
       linux: join(require('os').homedir(), '.mame'),
+    },
+    duckstation: {
+      win32: join(process.env.APPDATA || '', 'duckstation'),
+      darwin: join(require('os').homedir(), 'Library', 'Application Support', 'DuckStation'),
+      linux: join(require('os').homedir(), '.config', 'duckstation'),
+    },
+    eden: {
+      win32: join(process.env.APPDATA || '', 'Eden'),
+      darwin: join(require('os').homedir(), 'Library', 'Application Support', 'Eden'),
+      linux: join(require('os').homedir(), '.config', 'Eden'),
     },
   };
   return platformDirs[emulatorId]?.[platform] || dirname(installPath);
@@ -279,4 +307,93 @@ export async function applyRecommendedConfig(
   if (presets.length === 0) return false;
   await applyPreset(emulatorId, presets[0], installPath, onProgress);
   return true;
+}
+
+/** Write controller config for a given emulator */
+export function applyControllerConfig(emulatorId: string, installPath: string, controllerName?: string): boolean {
+  const configDir = getConfigDir(emulatorId, installPath);
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
+  }
+
+  switch (emulatorId) {
+    case 'retroarch': {
+      const cfgPath = join(configDir, 'retroarch.cfg');
+      const existing = existsSync(cfgPath) ? readFileSync(cfgPath, 'utf-8') : '';
+      // Append (or overwrite) controller-specific lines
+      const lines = existing.split('\n').filter(l =>
+        !l.startsWith('input_player1_joypad_index') &&
+        !l.startsWith('input_driver') &&
+        !l.startsWith('input_autodetect_enable')
+      );
+      lines.push('input_player1_joypad_index = "0"');
+      lines.push('input_autodetect_enable = "true"');
+      // Set input driver per platform
+      if (isMacOS()) lines.push('input_driver = "hid"');
+      else if (isWindows()) lines.push('input_driver = "dinput"');
+      else lines.push('input_driver = "udev"');
+      writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
+    case 'duckstation': {
+      const iniPath = join(configDir, 'settings.ini');
+      const existing = existsSync(iniPath) ? readFileSync(iniPath, 'utf-8') : '';
+      const lines = existing.split('\n').filter(l =>
+        !l.startsWith('ControllerBackend') &&
+        !l.startsWith('MultitapPort1')
+      );
+      lines.push('[Input]');
+      lines.push('ControllerBackend = "SDL"');
+      lines.push('[ControllerPort0]');
+      lines.push('MultitapPort1 = false');
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
+    case 'pcsx2': {
+      const iniPath = join(configDir, 'inis', 'PCSX2.ini');
+      const dir = dirname(iniPath);
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      const existing = existsSync(iniPath) ? readFileSync(iniPath, 'utf-8') : '';
+      const lines = existing.split('\n').filter(l =>
+        !l.startsWith('Multitap') && !l.startsWith('Pad1')
+      );
+      lines.push('[Pad]');
+      lines.push('MultitapPort0_Enabled = false');
+      lines.push('MultitapPort1_Enabled = false');
+      lines.push('Pad1 = "SDL"');
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
+    case 'dolphin': {
+      const iniPath = join(configDir, 'Config', 'Dolphin.ini');
+      const dir = dirname(iniPath);
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      const existing = existsSync(iniPath) ? readFileSync(iniPath, 'utf-8') : '';
+      const lines = existing.split('\n').filter(l =>
+        !l.startsWith('SIDevice') && !l.startsWith('AdapterRumble')
+      );
+      lines.push('[Android]');
+      lines.push('SIDevice0 = 6');
+      lines.push('AdapterRumble0 = True');
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
+    case 'eden':
+    case 'rpcs3': {
+      // RPCS3/Eden don't have simple config overrides for controller
+      break;
+    }
+    case 'mame': {
+      const iniPath = join(configDir, 'mame.ini');
+      const existing = existsSync(iniPath) ? readFileSync(iniPath, 'utf-8') : '';
+      const lines = existing.split('\n').filter(l =>
+        !l.startsWith('joystick') && !l.startsWith('keyboard')
+      );
+      lines.push('joystick 1');
+      lines.push('keyboard 0');
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
+  }
+  return false;
 }

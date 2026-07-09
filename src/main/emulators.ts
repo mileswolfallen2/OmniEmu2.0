@@ -1,5 +1,5 @@
 import { execSync, exec, ChildProcess } from 'child_process';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import { app } from 'electron';
 import {
@@ -94,43 +94,41 @@ export const knownEmulators: EmulatorConfig[] = [
     },
   },
   {
-    id: 'ryujinx',
-    name: 'Ryujinx',
-    description: 'Nintendo Switch emulator',
+    id: 'eden',
+    name: 'Eden',
+    description: 'Nintendo Switch emulator (community fork)',
     platforms: ['switch'],
     defaultPath: {
-      win32: 'C:\\Program Files\\Ryujinx\\Ryujinx.exe',
-      darwin: '/Applications/Ryujinx.app/Contents/MacOS/Ryujinx',
-      linux: '/usr/bin/Ryujinx',
+      win32: 'C:\\Program Files\\Eden\\Eden.exe',
+      darwin: '/Applications/Eden.app/Contents/MacOS/Eden',
+      linux: '/usr/bin/eden',
     },
     downloads: {
       win32: [
         {
-          url: 'https://github.com/Ryujinx/release-channel-master/releases/latest/download/ryujinx-1.2.0-win_x64.zip',
+          url: 'https://master.eden-emu.dev/v1783561671.41762940d6/Eden-Windows-41762940d6-amd64-gcc-standard.zip',
           format: 'zip',
-          executablePath: 'Ryujinx.exe',
+          executablePath: 'Eden.exe',
         },
       ],
       darwin: [
         {
-          url: 'https://github.com/Ryujinx/release-channel-master/releases/latest/download/ryujinx-1.2.0-mac_universal.zip',
-          format: 'zip',
-          executablePath: 'Ryujinx.app/Contents/MacOS/Ryujinx',
+          url: 'https://master.eden-emu.dev/v1783561671.41762940d6/Eden-macOS-41762940d6.dmg',
+          format: 'dmg',
         },
       ],
       linux: [
         {
-          url: 'https://github.com/Ryujinx/release-channel-master/releases/latest/download/ryujinx-1.2.0-linux_x64.zip',
-          format: 'zip',
-          executablePath: 'Ryujinx',
+          url: 'https://master.eden-emu.dev/v1783561671.41762940d6/Eden-Linux-41762940d6-amd64-gcc-standard.AppImage',
+          format: 'appimage',
         },
       ],
     },
     supported: true,
     websiteUrl: {
-      win32: 'https://ryujinx.org/download',
-      darwin: 'https://ryujinx.org/download',
-      linux: 'https://ryujinx.org/download',
+      win32: 'https://eden-emu.dev/',
+      darwin: 'https://eden-emu.dev/',
+      linux: 'https://eden-emu.dev/',
     },
   },
   {
@@ -211,6 +209,58 @@ export const knownEmulators: EmulatorConfig[] = [
     },
   },
   {
+    id: 'duckstation',
+    name: 'DuckStation',
+    description: 'PlayStation 1 emulator',
+    platforms: ['ps1'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\DuckStation\\duckstation-qt-x64-ReleaseLGL.normal.exe',
+      darwin: '/Applications/DuckStation.app/Contents/MacOS/DuckStation',
+      linux: '/usr/bin/duckstation-qt',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/stenzek/duckstation/releases/download/latest/duckstation-windows-x64-release.zip',
+          format: 'zip',
+          executablePath: 'duckstation-qt-x64-ReleaseLGL.normal.exe',
+          arch: 'x64',
+        },
+        {
+          url: 'https://github.com/stenzek/duckstation/releases/download/latest/duckstation-windows-arm64-release.zip',
+          format: 'zip',
+          executablePath: 'duckstation-qt-arm64-ReleaseLGL.normal.exe',
+          arch: 'arm64',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/stenzek/duckstation/releases/download/latest/duckstation-mac-release.zip',
+          format: 'zip',
+          executablePath: 'DuckStation.app/Contents/MacOS/DuckStation',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/stenzek/duckstation/releases/download/latest/DuckStation-x64.AppImage',
+          format: 'appimage',
+          arch: 'x64',
+        },
+        {
+          url: 'https://github.com/stenzek/duckstation/releases/download/latest/DuckStation-arm64.AppImage',
+          format: 'appimage',
+          arch: 'arm64',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://github.com/stenzek/duckstation/releases/latest',
+      darwin: 'https://github.com/stenzek/duckstation/releases/latest',
+      linux: 'https://github.com/stenzek/duckstation/releases/latest',
+    },
+  },
+  {
     id: 'retroarch',
     name: 'RetroArch',
     description: 'Multi-system emulator frontend (NES, SNES, N64, GB, GBA, PS1, etc.)',
@@ -226,22 +276,40 @@ export const knownEmulators: EmulatorConfig[] = [
     downloads: {
       win32: [
         {
-          url: 'https://buildbot.libretro.com/stable/1.19.1/windows/x86_64/RetroArch.7z',
+          url: 'https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch.7z',
           format: '7z',
           executablePath: 'RetroArch.exe',
+        },
+        {
+          url: 'https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch_cores.7z',
+          format: '7z',
         },
       ],
       darwin: [
         {
-          url: 'https://buildbot.libretro.com/stable/1.19.1/apple/osx/universal/RetroArch.dmg',
+          url: 'https://buildbot.libretro.com/stable/1.22.2/apple/osx/universal/RetroArch_Metal.dmg',
           format: 'dmg',
+          arch: 'arm64',
+        },
+        {
+          url: 'https://buildbot.libretro.com/stable/1.22.2/apple/osx/x86_64/RetroArch.dmg',
+          format: 'dmg',
+          arch: 'x64',
+        },
+        {
+          url: 'https://buildbot.libretro.com/stable/1.22.2/apple/osx/universal/RetroArch_cores.7z',
+          format: '7z',
         },
       ],
       linux: [
         {
-          url: 'https://buildbot.libretro.com/stable/1.19.1/linux/x86_64/RetroArch.7z',
+          url: 'https://buildbot.libretro.com/stable/1.22.2/linux/x86_64/RetroArch.7z',
           format: '7z',
           executablePath: 'retroarch',
+        },
+        {
+          url: 'https://buildbot.libretro.com/stable/1.22.2/linux/x86_64/RetroArch_cores.7z',
+          format: '7z',
         },
       ],
     },
@@ -317,9 +385,18 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'rpcs3'),
       join(omniEmuDir, 'RPCS3.AppImage'),
     ],
-    ryujinx: [
-      join(omniEmuDir, 'Ryujinx.exe'),
-      join(omniEmuDir, 'Ryujinx'),
+    eden: [
+      join(omniEmuDir, 'Eden.exe'),
+      join(omniEmuDir, 'Eden'),
+      join(home, 'Applications', 'Eden.app', 'Contents', 'MacOS', 'Eden'),
+      '/usr/local/bin/eden',
+    ],
+    duckstation: [
+      join(omniEmuDir, 'duckstation-qt-x64-ReleaseLGL.normal.exe'),
+      join(omniEmuDir, 'DuckStation'),
+      join(omniEmuDir, 'DuckStation.app', 'Contents', 'MacOS', 'DuckStation'),
+      join(home, 'Applications', 'DuckStation.app', 'Contents', 'MacOS', 'DuckStation'),
+      '/usr/local/bin/duckstation-qt',
     ],
     pcsx2: [
       join(omniEmuDir, 'pcsx2.exe'),
@@ -333,6 +410,32 @@ function alternativePaths(emulatorId: string): string[] {
     ],
   };
   return common[emulatorId] || [join(omniEmuDir)];
+}
+
+function detectVersion(binaryPath: string): string | undefined {
+  if (isMacOS() && binaryPath.includes('.app/Contents/MacOS/')) {
+    const plist = join(binaryPath, '..', '..', '..', 'Info.plist');
+    if (existsSync(plist)) {
+      try {
+        const out = execSync(
+          `/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "${plist}" 2>/dev/null || true`,
+          { timeout: 3000 }
+        ).toString().trim();
+        if (out) return out;
+      } catch { /* ignore */ }
+    }
+  }
+
+  if (isWindows()) {
+    try {
+      const out = execSync(
+        `powershell -NoProfile -Command "(Get-Item '${binaryPath}').VersionInfo.ProductVersion" 2>nul`
+      ).toString().trim();
+      if (out) return out;
+    } catch { /* ignore */ }
+  }
+
+  return undefined;
 }
 
 export function checkEmulator(id: string): EmulatorState {
@@ -354,17 +457,7 @@ export function checkEmulator(id: string): EmulatorState {
   }
 
   const path = detectEmulatorPath(config);
-  let version: string | undefined;
-
-  if (path) {
-    try {
-      const result = execSync(`"${path}" --version 2>&1 || "${path}" -v 2>&1`)
-        .toString().trim().split('\n')[0];
-      version = result || undefined;
-    } catch {
-      version = undefined;
-    }
-  }
+  const version = path ? detectVersion(path) : undefined;
 
   return {
     installed: !!path,
@@ -377,6 +470,16 @@ export function checkEmulator(id: string): EmulatorState {
 
 export function getAllEmulatorStates(): EmulatorState[] {
   return knownEmulators.map((e) => checkEmulator(e.id));
+}
+
+export function launchEmulator(emulatorId: string): boolean {
+  const state = checkEmulator(emulatorId);
+  if (!state.installed || !state.path) return false;
+
+  const child = exec(`"${state.path}"`, { cwd: dirname(state.path) });
+  if (child) child.unref();
+
+  return true;
 }
 
 export function launchGame(emulatorId: string, romPath: string): ChildProcess | null {
@@ -396,20 +499,74 @@ export function launchGame(emulatorId: string, romPath: string): ChildProcess | 
   return proc;
 }
 
+function findRetroArchCore(romPath: string): string | undefined {
+  const ext = extname(romPath).toLowerCase().replace(/^\./, '');
+  const corePreference: Record<string, string[]> = {
+    'nes': ['nestopia', 'mesen', 'fceumm'],
+    'smc': ['snes9x', 'bsnes_hd', 'bsnes', 'mednafen_snes'],
+    'sfc': ['snes9x', 'bsnes_hd', 'bsnes', 'mednafen_snes'],
+    'swc': ['snes9x', 'bsnes'],
+    'n64': ['mupen64plus_next', 'parallel_n64'],
+    'z64': ['mupen64plus_next', 'parallel_n64'],
+    'v64': ['mupen64plus_next', 'parallel_n64'],
+    'gba': ['mgba', 'vba_next', 'gpsp'],
+    'gb': ['mgba', 'gambatte', 'sameboy', 'gearboy'],
+    'gbc': ['mgba', 'gambatte', 'sameboy', 'gearboy'],
+    'nds': ['melonds', 'desmume'],
+    'bin': ['mednafen_psx_hw', 'pcsx_rearmed', 'swanstation'],
+    'cue': ['mednafen_psx_hw', 'pcsx_rearmed', 'swanstation'],
+    'iso': ['mednafen_psx_hw', 'pcsx_rearmed', 'swanstation'],
+    'pce': ['mednafen_pce_fast', 'mednafen_pce'],
+    'md': ['genesis_plus_gx', 'picodrive'],
+    'smd': ['genesis_plus_gx', 'picodrive'],
+  };
+  const candidates = corePreference[ext];
+  if (!candidates) return undefined;
+
+  const home = require('os').homedir();
+  const userData = app.getPath('userData');
+  const coreDirs = [
+    join(userData, 'emulators', 'retroarch', 'RetroArch.app', 'Contents', 'Resources', 'cores'),
+    join(userData, 'emulators', 'retroarch', 'cores'),
+    join(home, 'Library', 'Application Support', 'RetroArch', 'cores'),
+    '/usr/local/lib/retroarch/cores',
+    '/usr/lib/x86_64-linux-gnu/libretro',
+  ];
+  if (isWindows()) {
+    coreDirs.unshift(join(process.env.APPDATA || '', 'RetroArch', 'cores'));
+  }
+
+  for (const dir of coreDirs) {
+    if (!existsSync(dir)) continue;
+    let coreFiles: string[];
+    try { coreFiles = readdirSync(dir); } catch { continue; }
+    for (const preferred of candidates) {
+      const match = coreFiles.find(f => f.toLowerCase().includes(preferred));
+      if (match) return join(dir, match);
+    }
+  }
+  return undefined;
+}
+
 function launchArgs(emulatorId: string, romPath: string): string {
   switch (emulatorId) {
     case 'dolphin':
       return `--exec="${romPath}"`;
     case 'rpcs3':
       return `"${romPath}"`;
-    case 'ryujinx':
+    case 'eden':
       return `"${romPath}"`;
     case 'pcsx2':
       return `"${romPath}"`;
     case 'mame':
       return `"${romPath}"`;
-    case 'retroarch':
-      return `-L "${romPath}"`;
+    case 'retroarch': {
+      const core = findRetroArchCore(romPath);
+      if (core) return `-L "${core}" "${romPath}"`;
+      return `"${romPath}"`;
+    }
+    case 'duckstation':
+      return `"${romPath}"`;
     default:
       return `"${romPath}"`;
   }
@@ -492,6 +649,23 @@ function guessPlatform(ext: string): string {
   return map[ext] || 'other';
 }
 
+export function uninstallEmulator(id: string): boolean {
+  const userData = app.getPath('userData');
+  const installDir = join(userData, 'emulators', id);
+  const configMarker = join(userData, 'configs', `${id}.configured`);
+  let removed = false;
+
+  if (existsSync(installDir)) {
+    require('fs').rmSync(installDir, { recursive: true, force: true });
+    removed = true;
+  }
+  if (existsSync(configMarker)) {
+    require('fs').rmSync(configMarker, { force: true });
+  }
+
+  return removed;
+}
+
 function guessEmulator(ext: string): string {
   const map: Record<string, string> = {
     '.nes': 'retroarch', '.sfc': 'retroarch', '.smc': 'retroarch',
@@ -499,8 +673,11 @@ function guessEmulator(ext: string): string {
     '.gba': 'retroarch', '.gb': 'retroarch', '.gbc': 'retroarch',
     '.wbfs': 'dolphin', '.wad': 'dolphin', '.gcm': 'dolphin',
     '.gcz': 'dolphin', '.rvz': 'dolphin',
-    '.nsp': 'ryujinx', '.xci': 'ryujinx',
+    '.nsp': 'eden', '.xci': 'eden', '.nca': 'eden',
     '.pkg': 'rpcs3',
+    '.bin': 'duckstation', '.cue': 'duckstation', '.iso': 'duckstation',
+    '.img': 'duckstation', '.m3u': 'duckstation', '.pbp': 'duckstation',
+    '.chd': 'duckstation', '.ecm': 'duckstation', '.mds': 'duckstation',
     '.ps2': 'pcsx2', '.cso': 'pcsx2',
   };
   return map[ext] || 'retroarch';

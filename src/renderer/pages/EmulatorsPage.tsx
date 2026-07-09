@@ -81,6 +81,20 @@ export function EmulatorsPage() {
     await load();
   };
 
+  const handleOpen = async (id: string) => {
+    setActioning(id);
+    await window.omni.emulators.launch(id);
+    setActioning(null);
+  };
+
+  const handleUninstall = async (id: string) => {
+    if (!confirm(`Uninstall ${id} and remove all its files?`)) return;
+    setActioning(id);
+    await window.omni.emulators.uninstall(id);
+    setActioning(null);
+    await load();
+  };
+
   const handleOpenWebsite = async (id: string) => {
     await window.omni.emulators.openWebsite(id);
   };
@@ -238,6 +252,25 @@ export function EmulatorsPage() {
                     <span className="badge badge-installed" style={{ fontSize: 11 }}>
                       Configured
                     </span>
+                  </>
+                )}
+
+                {state.installed && (
+                  <>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={isActioning}
+                      onClick={() => handleOpen(state.config.id)}
+                    >
+                      Open
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      disabled={isActioning}
+                      onClick={() => handleUninstall(state.config.id)}
+                    >
+                      Uninstall
+                    </button>
                   </>
                 )}
 

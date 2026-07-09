@@ -14,7 +14,6 @@ export function LibraryPage() {
   const [loading, setLoading] = useState(false);
   const [romsDir, setRomsDir] = useState<string>('');
 
-  // Load saved ROM directory on mount
   useEffect(() => {
     (async () => {
       const settings = await window.omni.settings.get();
@@ -22,19 +21,28 @@ export function LibraryPage() {
         setRomsDir(settings.romsDirectory);
         setLoading(true);
         const results = await window.omni.roms.scan(settings.romsDirectory);
-        setGames(results);
+        setGames(await scrapeMissingArt(results));
         setLoading(false);
       }
     })();
   }, []);
 
+  const scrapeMissingArt = async (list: GameEntry[]): Promise<GameEntry[]> => {
+    return Promise.all(list.map(async (g) => {
+      if (!g.coverUrl) {
+        const url = await window.omni.game.scrapeArt(g.title, g.platform);
+        if (url) g.coverUrl = url;
+      }
+      return g;
+    }));
+  };
+
   const scanDirectory = useCallback(async (dir: string) => {
     setRomsDir(dir);
     setLoading(true);
-    // Save to persistent settings
     await window.omni.settings.save({ romsDirectory: dir });
     const results = await window.omni.roms.scan(dir);
-    setGames(results);
+    setGames(await scrapeMissingArt(results));
     setLoading(false);
   }, []);
 
@@ -90,9 +98,18 @@ export function LibraryPage() {
         <div>
           <div className="info-bar">
             <span>{games.length} games found</span>
-            <button className="btn btn-secondary btn-sm" onClick={handleScan}>
-              Rescan
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-secondary btn-sm" onClick={async () => {
+                setLoading(true);
+                setGames(await scrapeMissingArt(games));
+                setLoading(false);
+              }}>
+                Scrape All Art
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={handleScan}>
+                Rescan
+              </button>
+            </div>
           </div>
 
           <div className="library-grid">
@@ -104,7 +121,16 @@ export function LibraryPage() {
                 title={`Launch ${game.title} via ${game.emulatorId}`}
               >
                 <div className="game-card-cover">
-                  {platformIcons[game.platform] || '🎮'}
+                  {game.coverUrl ? (
+                    <img
+                      src={game.coverUrl}
+                      alt={game.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 32 }}>{platformIcons[game.platform] || '🎮'}</span>
+                  )}
                 </div>
                 <div className="game-card-info">
                   <div className="game-card-title">{game.title}</div>

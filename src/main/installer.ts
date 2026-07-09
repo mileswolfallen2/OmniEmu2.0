@@ -63,27 +63,41 @@ function execOrThrow(cmd: string): string {
 
 function findAppInDir(dir: string): string | undefined {
   const entries = readdirSync(dir, { withFileTypes: true });
-  for (const e of entries) {
-    const full = join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name.endsWith('.app')) {
-        const macosBin = join(full, 'Contents', 'MacOS', basename(e.name, '.app'));
-        if (existsSync(macosBin)) return macosBin;
-      }
-      const found = findAppInDir(full);
-      if (found) return found;
-    } else if (e.isFile()) {
-      const isExec = e.name.endsWith('.exe') || e.name.endsWith('.AppImage')
-        || e.name === 'retroarch' || e.name === 'dolphin-emu'
-        || e.name === 'rpcs3' || e.name === 'Ryujinx'
-        || e.name === 'mame' || e.name === 'mame64' || e.name === 'PCSX2';
-      if (isExec) return full;
-      // Check if it's executable
-      try {
-        if (statSync(full).mode & 0o111) return full;
-      } catch { /* skip */ }
+  const dirs = entries.filter(e => e.isDirectory());
+  const files = entries.filter(e => e.isFile());
+
+  // Check .app bundles first (before cores or other dirs)
+  for (const e of dirs) {
+    if (e.name.endsWith('.app')) {
+      const macosBin = join(dir, e.name, 'Contents', 'MacOS', basename(e.name, '.app'));
+      if (existsSync(macosBin)) return macosBin;
     }
   }
+
+  // Then check known executable files in root
+  for (const e of files) {
+    const lowerName = e.name.toLowerCase();
+    const knownNames = ['retroarch', 'dolphin-emu', 'dolphin', 'rpcs3', 'ryujinx', 'eden', 'mame', 'mame64', 'pcsx2', 'duckstation'];
+    const isExec = e.name.endsWith('.exe') || e.name.endsWith('.AppImage')
+      || knownNames.includes(lowerName);
+    if (isExec) return join(dir, e.name);
+  }
+
+  // Recurse into non-.app directories (skip .app bundles)
+  for (const e of dirs) {
+    if (!e.name.endsWith('.app')) {
+      const found = findAppInDir(join(dir, e.name));
+      if (found) return found;
+    }
+  }
+
+  // Last resort: any executable file in root
+  for (const e of files) {
+    try {
+      if (statSync(join(dir, e.name)).mode & 0o111) return join(dir, e.name);
+    } catch { /* skip */ }
+  }
+
   return undefined;
 }
 
@@ -188,19 +202,11 @@ export async function installEmulator(
   onProgress: ProgressCallback
 ): Promise<string> {
   const candidates = downloads.filter((d) => !d.arch || d.arch === arch);
-  const download = candidates[0];
-  if (!download) throw new Error(`No download available for ${emulatorId} on ${platform} (${arch})`);
+  if (candidates.length === 0) throw new Error(`No download available for ${emulatorId} on ${platform} (${arch})`);
 
   const report = (stage: InstallProgress['stage'], percent: number, message: string) => {
     onProgress({ emulatorId, stage, percent, message });
   };
-
-  report('downloading', 0, `Downloading ${emulatorId}...`);
-  const downloadPath = tempName(`.${download.format}`);
-  await downloadFile(download.url, downloadPath, (pct) => {
-    report('downloading', pct, `Downloading ${emulatorId}... ${pct}%`);
-  });
-  report('downloading', 100, 'Download complete');
 
   const installDir = join(app.getPath('userData'), 'emulators', emulatorId);
   if (!existsSync(installDir)) mkdirSync(installDir, { recursive: true });
@@ -208,24 +214,35 @@ export async function installEmulator(
   const archiveFormats = ['zip', 'tar.gz', 'tar.bz2', '7z', 'dmg'];
   const installerFormats = ['exe', 'msi', 'pkg', 'appimage'];
 
-  if (archiveFormats.includes(download.format)) {
-    report('extracting', 0, `Extracting ${emulatorId}...`);
-    extractArchive(downloadPath, installDir, download.format, emulatorId, (msg) => {
-      report('extracting', 50, msg);
-    });
-    report('extracting', 100, 'Extraction complete');
-  }
+  let totalSteps = candidates.length;
+  let completedSteps = 0;
 
-  if (installerFormats.includes(download.format)) {
-    report('installing', 0, `Installing ${emulatorId}...`);
-    runInstaller(downloadPath, download.format, emulatorId, installDir, (msg) => {
-      report('installing', 50, msg);
-    });
-    report('installing', 100, 'Installation complete');
-  }
+  for (const download of candidates) {
+    const stepLabel = totalSteps > 1 ? ` (${completedSteps + 1}/${totalSteps})` : '';
+    report('downloading', Math.round((completedSteps / totalSteps) * 100), `Downloading ${download.url.split('/').pop()}${stepLabel}...`);
 
-  // Cleanup
-  try { execSync(`rm -f "${downloadPath}"`); } catch { /* ignore */ }
+    const downloadPath = tempName(`.${download.format}`);
+    await downloadFile(download.url, downloadPath, (pct) => {
+      report('downloading', Math.round(((completedSteps + pct / 100) / totalSteps) * 100), `Downloading ${download.url.split('/').pop()}${stepLabel}... ${pct}%`);
+    });
+
+    if (archiveFormats.includes(download.format)) {
+      report('extracting', Math.round((completedSteps / totalSteps) * 100), `Extracting ${download.url.split('/').pop()}${stepLabel}...`);
+      extractArchive(downloadPath, installDir, download.format, emulatorId, (msg) => {
+        report('extracting', Math.round(((completedSteps + 0.5) / totalSteps) * 100), msg);
+      });
+    }
+
+    if (installerFormats.includes(download.format)) {
+      report('installing', Math.round((completedSteps / totalSteps) * 100), `Installing ${download.url.split('/').pop()}${stepLabel}...`);
+      runInstaller(downloadPath, download.format, emulatorId, installDir, (msg) => {
+        report('installing', Math.round(((completedSteps + 0.5) / totalSteps) * 100), msg);
+      });
+    }
+
+    try { execSync(`rm -f "${downloadPath}"`); } catch { /* ignore */ }
+    completedSteps++;
+  }
 
   report('done', 100, `${emulatorId} installed`);
 
@@ -233,7 +250,40 @@ export async function installEmulator(
 }
 
 /** After install, find the executable in the install dir */
-export function findInstalledBinary(emulatorId: string, installDir: string): string | undefined {
+export function findInstalledBinary(emulatorId: string, installDir: string, executablePath?: string): string | undefined {
   if (!existsSync(installDir)) return undefined;
+
+  // Try explicit executablePath first (from download config)
+  if (executablePath) {
+    const explicit = join(installDir, executablePath);
+    if (existsSync(explicit)) return explicit;
+  }
+
+  // macOS: check for .app bundle with several naming variants
+  if (isMacOS()) {
+    const appNames = [
+      `${capitalize(emulatorId)}.app`,           // Retroarch.app
+      `${emulatorId}.app`,                       // retroarch.app
+      `${emulatorId.charAt(0).toUpperCase()}${emulatorId.slice(1).toLowerCase()}.app`, // Retroarch.app
+    ];
+    // Also check common overrides
+    if (emulatorId === 'retroarch') {
+      appNames.unshift('RetroArch.app');          // actual macOS app name
+    }
+
+    for (const appName of appNames) {
+      const appDir = join(installDir, appName);
+      if (existsSync(appDir)) {
+        const binName = basename(appName, '.app');
+        const macosBin = join(appDir, 'Contents', 'MacOS', binName);
+        if (existsSync(macosBin)) return macosBin;
+      }
+    }
+  }
+
   return findAppInDir(installDir);
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

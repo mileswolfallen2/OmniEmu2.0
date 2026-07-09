@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { AppSettings } from '../../shared/types';
+import { BiosCheckPanel } from '../components/BiosCheckPanel';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -61,6 +62,14 @@ export function SettingsPage() {
             Browse
           </button>
         </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>BIOS</h3>
+        <BiosCheckPanel
+          biosDir={settings.biosDirectory}
+          onBiosDirChange={(dir) => update({ biosDirectory: dir })}
+        />
       </div>
 
       <div className="settings-section">

@@ -4,6 +4,8 @@ import { writeFileSync } from 'fs';
 import {
   getAllEmulatorStates,
   checkEmulator,
+  uninstallEmulator,
+  launchEmulator,
   launchGame,
   scanRoms,
   knownEmulators,
@@ -12,10 +14,12 @@ import {
   getEmulatorsDirectory,
 } from './emulators';
 import { installEmulator, findInstalledBinary } from './installer';
-import { applyRecommendedConfig, getPresets, checkConfigured } from './configurator';
+import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerConfig } from './configurator';
 import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
-import { InstallProgress, AppSettings } from '../shared/types';
+import { InstallProgress, AppSettings, GameEntry } from '../shared/types';
+import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail } from './scraper';
+import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
 
 export function registerIpcHandlers(): void {
   // System
@@ -49,7 +53,8 @@ export function registerIpcHandlers(): void {
       const installDir = await installEmulator(emulatorId, downloads, platform, arch, sendProgress);
 
       // Try to find the binary and create a symlink or record it
-      const binary = findInstalledBinary(emulatorId, installDir);
+      const download = downloads.filter((d) => !d.arch || d.arch === arch)[0];
+      const binary = findInstalledBinary(emulatorId, installDir, download?.executablePath);
       if (binary) {
         const marker = join(installDir, '.installed');
         writeFileSync(marker, binary);
@@ -85,6 +90,15 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  // Launch emulator standalone (no ROM)
+  ipcMain.handle('emulators:launch', (_event, id: string) => launchEmulator(id));
+
+  // Uninstall emulator
+  ipcMain.handle('emulators:uninstall', (_event, id: string) => {
+    const removed = uninstallEmulator(id);
+    return { removed, state: checkEmulator(id) };
+  });
+
   // Open website (fallback for manual download)
   ipcMain.handle('emulators:open-website', (_event, id: string) => {
     const emu = findEmulator(id);
@@ -115,9 +129,44 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     'game:launch',
     (_event, emulatorId: string, romPath: string) => {
-      return !!launchGame(emulatorId, romPath);
+      const launched = launchGame(emulatorId, romPath);
+      if (launched) {
+        const emu = findEmulator(emulatorId);
+        const filename = romPath.split('/').pop() || romPath.split('\\').pop() || romPath;
+        const title = parseGameTitle(filename);
+        const entry: GameEntry = {
+          id: `${emulatorId}-${Date.now()}`,
+          romPath,
+          title,
+          platform: emu?.platforms?.[0] || '',
+          emulatorId,
+          lastPlayed: new Date().toISOString(),
+          playCount: 1,
+          addedAt: new Date().toISOString(),
+        };
+        const s = settings.get();
+        settings.save({ recentGames: addRecentGame(s.recentGames || [], entry) });
+      }
+      return !!launched;
     }
   );
+
+  // Recent games
+  ipcMain.handle('games:recent', () => {
+    const s = settings.get();
+    return s.recentGames || [];
+  });
+
+  // Clear recent games
+  ipcMain.handle('games:clear-recent', () => {
+    settings.save({ recentGames: [] });
+    return true;
+  });
+
+  // Scrape a game's art URL — accepts display title, uses scrape-friendly title internally
+  ipcMain.handle('games:scrape-art', async (_event, title: string, platform: string) => {
+    return findValidThumbnail(buildScrapeTitle(title), platform);
+  });
 
   // Settings
   ipcMain.handle('settings:get', () => settings.get());
@@ -125,6 +174,39 @@ export function registerIpcHandlers(): void {
     settings.save(s)
   );
   ipcMain.handle('settings:reset', () => settings.reset());
+
+  // Controller config
+  ipcMain.handle(
+    'emulators:update-controller-config',
+    (_event, emulatorId: string, installPath: string, controllerName?: string) => {
+      return applyControllerConfig(emulatorId, installPath, controllerName);
+    }
+  );
+
+  // BIOS
+  ipcMain.handle('bios:list-known', () => getKnownBiosList());
+
+  ipcMain.handle('bios:scan', (_event, directory?: string) => {
+    const dir = directory || settings.get().biosDirectory || getDefaultBiosDir();
+    return scanBiosDirectory(dir);
+  });
+
+  ipcMain.handle('bios:select-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Select BIOS Directory',
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+      const dir = result.filePaths[0];
+      settings.save({ biosDirectory: dir });
+      return dir;
+    }
+    return null;
+  });
+
+  ipcMain.handle('bios:configure-retroarch', (_event, configDir: string, biosDir: string) => {
+    return updateRetroarchBiosPath(configDir, biosDir);
+  });
 
   // Paths
   ipcMain.handle('paths:roms-directory', () => getRomsDirectory());

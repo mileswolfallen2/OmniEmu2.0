@@ -4,22 +4,27 @@ import { Dashboard } from './pages/Dashboard';
 import { EmulatorsPage } from './pages/EmulatorsPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ControllerPage } from './pages/ControllerPage';
+import { useGamepadNav } from './hooks/useGamepadNav';
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'settings';
+type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller';
 
 export function App() {
+  useGamepadNav();
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigate={setCurrentPage} />;
       case 'emulators':
         return <EmulatorsPage />;
       case 'library':
         return <LibraryPage />;
       case 'settings':
         return <SettingsPage />;
+      case 'controller':
+        return <ControllerPage />;
     }
   };
 
@@ -28,6 +33,7 @@ export function App() {
     emulators: 'Emulators',
     library: 'Game Library',
     settings: 'Settings',
+    controller: 'Controller',
   };
 
   return (

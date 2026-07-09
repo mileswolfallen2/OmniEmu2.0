@@ -88,6 +88,10 @@ export interface AppSettings {
   closeToTray: boolean;
   /** URL to fetch recommended config presets from */
   presetSourceUrl: string;
+  /** Recently played games (max 10) */
+  recentGames: GameEntry[];
+  /** Directory for BIOS files */
+  biosDirectory: string;
 }
 
 export interface SystemInfo {

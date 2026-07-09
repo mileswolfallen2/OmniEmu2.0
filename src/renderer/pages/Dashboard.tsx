@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import type { EmulatorState, SystemInfo } from '../../shared/types';
+import type { EmulatorState, SystemInfo, GameEntry } from '../../shared/types';
 
-export function Dashboard() {
+export function Dashboard({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const [emulators, setEmulators] = useState<EmulatorState[]>([]);
   const [system, setSystem] = useState<SystemInfo | null>(null);
+  const [recent, setRecent] = useState<GameEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [states, info] = await Promise.all([
+      const [states, info, recentGames] = await Promise.all([
         window.omni.emulators.states(),
         window.omni.system.info(),
+        window.omni.game.recent(),
       ]);
       setEmulators(states);
       setSystem(info);
+      setRecent(recentGames || []);
       setLoading(false);
     }
     load();
@@ -21,7 +24,6 @@ export function Dashboard() {
 
   const installed = emulators.filter((e) => e.installed).length;
   const total = emulators.filter((e) => e.config.supported).length;
-  const gamesCount = 0; // would come from library scan
 
   if (loading) {
     return <div className="loading">Loading dashboard...</div>;
@@ -66,9 +68,9 @@ export function Dashboard() {
             <h3>Game Library</h3>
           </div>
           <p style={{ fontSize: 32, fontWeight: 700, color: 'var(--accent)' }}>
-            {gamesCount}
+            {recent.filter(g => g.playCount > 0).length || 0}
           </p>
-          <p>games in your library</p>
+          <p>games played</p>
         </div>
 
         <div className="card">
@@ -88,14 +90,46 @@ export function Dashboard() {
         </div>
       </div>
 
+      {recent.length > 0 && (
+        <>
+          <h3 className="mt-4 mb-2" style={{ fontSize: 16, fontWeight: 600 }}>
+            Resume Games
+          </h3>
+          <div className="library-grid">
+            {recent.slice(0, 6).map((game) => (
+              <div
+                key={game.id}
+                className="game-card"
+                onClick={async () => {
+                  await window.omni.game.launch(game.emulatorId, game.romPath);
+                  const updated = await window.omni.game.recent();
+                  setRecent(updated || []);
+                }}
+              >
+                <div className="game-card-cover">
+                  {game.coverUrl ? (
+                    <img src={game.coverUrl} alt={game.title} />
+                  ) : (
+                    <div className="game-card-placeholder">
+                      {game.platform.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="game-card-info">
+                  <strong>{game.title}</strong>
+                  <span className="text-muted text-sm">{game.lastPlayed ? new Date(game.lastPlayed).toLocaleDateString() : ''}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       <h3 className="mt-4 mb-2" style={{ fontSize: 16, fontWeight: 600 }}>
         Quick Actions
       </h3>
       <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn btn-primary" onClick={() => {
-          const nav = document.querySelector('[data-nav-emulators]') as HTMLButtonElement;
-          nav?.click();
-        }}>
+        <button className="btn btn-primary" onClick={() => onNavigate?.('emulators')}>
           Manage Emulators
         </button>
         <button className="btn btn-secondary" onClick={() => {
