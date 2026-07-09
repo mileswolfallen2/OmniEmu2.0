@@ -1,15 +1,40 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage } from 'electron';
 import { join } from 'path';
+import { existsSync } from 'fs';
 import { registerIpcHandlers } from './ipc';
 import { settings } from './settings';
-import { isMacOS, isWindows } from './platform';
+import { isMacOS } from './platform';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 
-const isDev = !app.isPackaged;
+const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+
+function createAppIcon() {
+  const iconPaths = [
+    join(__dirname, '../../assets/icon.png'),
+    join(__dirname, '../renderer/assets/icon.png'),
+    join(__dirname, '../../build/icon.png'),
+  ];
+  for (const p of iconPaths) {
+    try {
+      if (existsSync(p)) return nativeImage.createFromPath(p);
+    } catch { /* skip */ }
+  }
+  // Fallback: 16x16 purple pixel
+  const size = 16;
+  const buf = Buffer.alloc(size * size * 4 + 8);
+  buf.writeUInt32LE(size, 0);
+  buf.writeUInt32LE(size, 4);
+  for (let i = 8; i < buf.length; i += 4) {
+    buf[i] = 108; buf[i + 1] = 99; buf[i + 2] = 255; buf[i + 3] = 255;
+  }
+  return nativeImage.createFromBuffer(buf, { width: size, height: size });
+}
 
 function createWindow(): void {
+  const icon = createAppIcon();
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -18,6 +43,7 @@ function createWindow(): void {
     title: 'OmniEmu',
     backgroundColor: '#1a1a2e',
     show: false,
+    icon,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -26,9 +52,11 @@ function createWindow(): void {
     },
   });
 
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+  if (VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(VITE_DEV_SERVER_URL);
+    if (process.env.OMNIEMU_DEVTOOLS) {
+      mainWindow.webContents.openDevTools();
+    }
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
@@ -51,10 +79,10 @@ function createWindow(): void {
 }
 
 function createTray(): void {
-  const iconSize = isMacOS() ? 16 : 24;
-  const icon = nativeImage.createEmpty();
+  const icon = createAppIcon();
+  const trayIcon = icon.resize({ width: 22, height: 22 });
 
-  tray = new Tray(icon);
+  tray = new Tray(trayIcon);
   tray.setToolTip('OmniEmu');
 
   const contextMenu = Menu.buildFromTemplate([
@@ -65,6 +93,20 @@ function createTray(): void {
 
   tray.setContextMenu(contextMenu);
   tray.on('click', () => mainWindow?.show());
+}
+
+// Prevent multiple instances
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
 }
 
 app.whenReady().then(() => {

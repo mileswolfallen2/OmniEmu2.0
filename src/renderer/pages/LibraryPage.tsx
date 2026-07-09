@@ -2,71 +2,87 @@ import React, { useEffect, useState, useCallback } from 'react';
 import type { GameEntry } from '../../shared/types';
 
 const platformIcons: Record<string, string> = {
-  nes: '🕹️',
-  snes: '🕹️',
-  n64: '🎮',
-  gba: '🎮',
-  gbc: '🎮',
-  ps1: '💿',
-  ps2: '💿',
-  ps3: '💿',
-  wii: '📀',
-  gc: '📀',
-  switch: '🕹️',
-  arcade: '🕹️',
+  nes: '🕹️', snes: '🕹️', n64: '🎮',
+  gba: '🎮', gbc: '🎮',
+  ps1: '💿', ps2: '💿', ps3: '💿',
+  wii: '📀', gc: '📀',
+  switch: '🕹️', arcade: '🕹️',
 };
 
 export function LibraryPage() {
   const [games, setGames] = useState<GameEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDir, setSelectedDir] = useState<string | null>(null);
+  const [romsDir, setRomsDir] = useState<string>('');
 
-  const handleScan = useCallback(async () => {
-    const dir = await window.omni.roms.selectDirectory();
-    if (!dir) return;
-    setSelectedDir(dir);
+  // Load saved ROM directory on mount
+  useEffect(() => {
+    (async () => {
+      const settings = await window.omni.settings.get();
+      if (settings.romsDirectory) {
+        setRomsDir(settings.romsDirectory);
+        setLoading(true);
+        const results = await window.omni.roms.scan(settings.romsDirectory);
+        setGames(results);
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const scanDirectory = useCallback(async (dir: string) => {
+    setRomsDir(dir);
     setLoading(true);
+    // Save to persistent settings
+    await window.omni.settings.save({ romsDirectory: dir });
     const results = await window.omni.roms.scan(dir);
     setGames(results);
     setLoading(false);
   }, []);
 
+  const handleScan = useCallback(async () => {
+    const dir = await window.omni.roms.selectDirectory();
+    if (!dir) return;
+    await scanDirectory(dir);
+  }, [scanDirectory]);
+
   const handleLaunch = async (game: GameEntry) => {
     await window.omni.game.launch(game.emulatorId, game.romPath);
   };
 
-  const handleOpenDirectory = async () => {
-    const dir = await window.omni.roms.selectDirectory();
-    if (!dir) return;
-    setSelectedDir(dir);
-    setLoading(true);
-    const results = await window.omni.roms.scan(dir);
-    setGames(results);
-    setLoading(false);
-  };
-
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         <button className="btn btn-primary" onClick={handleScan}>
-          Scan for ROMs
+          Select ROM Folder
         </button>
-        {selectedDir && (
-          <span className="text-sm text-muted" style={{ padding: '8px 0' }}>
-            {selectedDir}
+        {romsDir && (
+          <span className="text-sm text-muted" style={{ padding: '8px 0', maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {romsDir}
           </span>
         )}
       </div>
 
       {loading && <div className="loading">Scanning for games...</div>}
 
-      {!loading && games.length === 0 && (
-        <div className="scan-area" onClick={handleOpenDirectory}>
+      {!loading && games.length === 0 && !romsDir && (
+        <div className="scan-area" onClick={handleScan}>
           <div style={{ fontSize: 48 }}>📂</div>
-          <p>Click to select a ROM directory</p>
+          <p>Select a folder to scan for ROMs</p>
           <p className="text-sm text-muted mt-2">
-            Supported formats: .nes, .sfc, .n64, .gba, .iso, .wbfs, .nsp, .ps2, and more
+            Your ROM directory will be saved for next time
           </p>
+        </div>
+      )}
+
+      {!loading && games.length === 0 && romsDir && (
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <p>No ROMs found in that folder</p>
+          <p className="text-sm text-muted mt-2">
+            Supported: .nes, .sfc, .n64, .gba, .iso, .wbfs, .nsp, .ps2, .chd, and more
+          </p>
+          <button className="btn btn-secondary mt-4" onClick={handleScan}>
+            Choose another folder
+          </button>
         </div>
       )}
 
@@ -74,7 +90,9 @@ export function LibraryPage() {
         <div>
           <div className="info-bar">
             <span>{games.length} games found</span>
-            <span>{(games.length / 10).toFixed(1)} GB estimated</span>
+            <button className="btn btn-secondary btn-sm" onClick={handleScan}>
+              Rescan
+            </button>
           </div>
 
           <div className="library-grid">
@@ -91,9 +109,7 @@ export function LibraryPage() {
                 <div className="game-card-info">
                   <div className="game-card-title">{game.title}</div>
                   <div className="game-card-platform">
-                    {game.platform.toUpperCase()}
-                    {' · '}
-                    {game.emulatorId}
+                    {game.platform.toUpperCase()} · {game.emulatorId}
                   </div>
                 </div>
               </div>

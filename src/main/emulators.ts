@@ -288,6 +288,13 @@ function alternativePaths(emulatorId: string): string[] {
   const userData = app.getPath('userData');
   const omniEmuDir = join(userData, 'emulators', emulatorId);
 
+  // Check marker file first (written after a successful install)
+  const markerFile = join(omniEmuDir, '.installed');
+  try {
+    const markerPath = require('fs').readFileSync(markerFile, 'utf-8').trim();
+    if (markerPath && existsSync(markerPath)) return [markerPath];
+  } catch { /* no marker */ }
+
   const common: Record<string, string[]> = {
     dolphin: [
       join(omniEmuDir, 'Dolphin.exe'),

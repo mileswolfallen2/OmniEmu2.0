@@ -447,6 +447,21 @@ select:focus, input[type="text"]:focus {
   gap: 6px;
 }
 
+/* Progress bar */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 300ms ease, background 300ms ease;
+}
+
 /* Utility */
 .mt-2 { margin-top: 8px; }
 .mt-4 { margin-top: 16px; }

@@ -1,4 +1,6 @@
 import { ipcMain, shell, dialog, BrowserWindow } from 'electron';
+import { join } from 'path';
+import { writeFileSync } from 'fs';
 import {
   getAllEmulatorStates,
   checkEmulator,
@@ -9,7 +11,7 @@ import {
   getRomsDirectory,
   getEmulatorsDirectory,
 } from './emulators';
-import { installEmulator } from './installer';
+import { installEmulator, findInstalledBinary } from './installer';
 import { applyRecommendedConfig, getPresets, checkConfigured } from './configurator';
 import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
@@ -44,7 +46,14 @@ export function registerIpcHandlers(): void {
         win?.webContents.send('emulators:install-progress', p);
       };
 
-      await installEmulator(emulatorId, downloads, platform, arch, sendProgress);
+      const installDir = await installEmulator(emulatorId, downloads, platform, arch, sendProgress);
+
+      // Try to find the binary and create a symlink or record it
+      const binary = findInstalledBinary(emulatorId, installDir);
+      if (binary) {
+        const marker = join(installDir, '.installed');
+        writeFileSync(marker, binary);
+      }
 
       // Re-check state after install
       return checkEmulator(emulatorId);

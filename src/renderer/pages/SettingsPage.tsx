@@ -85,6 +85,25 @@ export function SettingsPage() {
       </div>
 
       <div className="settings-section">
+        <h3>Presets</h3>
+
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Preset Source URL</div>
+            <div className="setting-desc">
+              URL to fetch recommended emulator config presets from
+            </div>
+          </div>
+          <input
+            type="text"
+            value={settings.presetSourceUrl}
+            onChange={(e) => update({ presetSourceUrl: e.target.value })}
+            style={{ width: 300 }}
+          />
+        </div>
+      </div>
+
+      <div className="settings-section">
         <h3>Behavior</h3>
 
         <div className="setting-row">
