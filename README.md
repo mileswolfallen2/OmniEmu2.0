@@ -31,7 +31,7 @@ Cross-platform emulator manager and ROM library — for Windows, macOS, and Linu
 
 ```bash
 npm install
-npm run dev
+npm run start
 ```
 
 This starts the Vite dev server for the renderer and the TypeScript compiler for the main process in watch mode.
