@@ -29,12 +29,14 @@ export function useGamepadNav() {
         const dpadLeft = gp.buttons[14]?.pressed || gp.axes[0] < -0.6;
         const dpadRight = gp.buttons[15]?.pressed || gp.axes[0] > 0.6;
 
-        // --- Sidebar navigation with Left/Right ---
+        // --- Sidebar navigation with Left/Right (only when sidebar is focused) ---
         if (dpadLeft && debounced('left')) {
-          cycleSidebar(-1);
+          const focused = document.activeElement;
+          if (focused?.closest('.sidebar')) cycleSidebar(-1);
         }
         if (dpadRight && debounced('right')) {
-          cycleSidebar(1);
+          const focused = document.activeElement;
+          if (focused?.closest('.sidebar')) cycleSidebar(1);
         }
 
         // --- Page content navigation with Up/Down (Tab/Shift+Tab) ---
@@ -44,7 +46,6 @@ export function useGamepadNav() {
           if (sidebar) {
             cycleSidebar(-1);
           } else {
-            // Focus previous focusable element
             const focusable = getFocusableElements();
             const idx = focusable.indexOf(focused as HTMLElement);
             if (idx > 0) focusable[idx - 1]?.focus();
@@ -63,17 +64,16 @@ export function useGamepadNav() {
           }
         }
 
-        // A button (0) → click
+        // A button (0) → confirm / click
         if (gp.buttons[0]?.pressed && debounced('a')) {
           const el = document.activeElement as HTMLElement;
           if (el) el.click();
         }
 
-        // B button (1) → focus sidebar (return to nav)
+        // B button (1) → back / blur (do not force sidebar)
         if (gp.buttons[1]?.pressed && debounced('b')) {
-          const sideItems = document.querySelectorAll<HTMLElement>(SIDEBAR_SELECTOR);
-          const active = document.querySelector('.nav-item.active') as HTMLElement;
-          (active || sideItems[0])?.focus();
+          const focused = document.activeElement as HTMLElement;
+          if (focused) focused.blur();
         }
 
         // Start (9) → focus first interactive element on page

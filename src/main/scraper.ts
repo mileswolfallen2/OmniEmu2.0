@@ -46,48 +46,88 @@ const platformThumbDir: Record<string, string> = {
   'gc': 'Nintendo_-_GameCube',
   'wii': 'Nintendo_-_Wii',
   'arcade': 'MAME',
+  'dreamcast': 'Sega_-_Dreamcast',
 };
 
 function safeTitle(title: string): string {
   return title.replace(/[:]/g, '').replace(/[/\\?*]/g, '_').trim();
 }
 
-/** Build a properly URL-encoded thumbnail URL */
 function buildEncodedUrl(dir: string, subdir: string, title: string): string {
   const safe = safeTitle(title);
   const raw = `${thumbBase}/${dir}/${subdir}/${safe}.png`;
   return encodeURI(raw);
 }
 
-/** Try multiple URL patterns via GET and return the first valid URL */
+function buildMobyGamesUrl(title: string): string {
+  const q = encodeURIComponent(title.trim());
+  return `https://www.mobygames.com/search/quick?q=${q}&search=Go`;
+}
+
+async function tryFetchImage(url: string): Promise<string | undefined> {
+  try {
+    const valid = await urlExists(url);
+    if (valid) return url;
+  } catch { /* skip */ }
+  return undefined;
+}
+
+async function tryMobyGames(title: string): Promise<string | undefined> {
+  const searchUrl = buildMobyGamesUrl(title);
+  try {
+    const html = await fetchText(searchUrl);
+    // Extract first game cover image from search results
+    const match = html.match(/<img[^>]*class="[^"]*cover[^"]*"[^>]*src="([^"]+)"/i)
+      || html.match(/<img[^>]*src="([^"]+)"[^>]*alt="[^"]*Cover[^"]*"/i);
+    if (match) {
+      const imgUrl = match[1].startsWith('http') ? match[1] : `https://www.mobygames.com${match[1]}`;
+      const valid = await urlExists(imgUrl);
+      if (valid) return imgUrl;
+    }
+  } catch { /* skip */ }
+  return undefined;
+}
+
+/** Try multiple URL patterns and return the first valid URL */
 export async function findValidThumbnail(title: string, platform: string): Promise<string | undefined> {
+  // Source 1: libretro-thumbnails
   const dir = platformThumbDir[platform];
-  if (!dir) return undefined;
+  if (dir) {
+    const subdirs = ['Named_Boxarts', 'Named_Snaps', 'Named_Titles', 'Named_Logos'];
+    const titles = new Set<string>();
 
-  const urls: string[] = [];
-  const subdirs = ['Named_Boxarts', 'Named_Snaps'];
-  const titles = new Set<string>();
+    titles.add(safeTitle(title));
+    // Without region codes
+    const stripped = title.replace(/\([^)]*\)/g, '').trim();
+    const safeStripped = safeTitle(stripped);
+    if (safeStripped && safeStripped !== safeTitle(title)) titles.add(safeStripped);
 
-  // Try raw title (with region codes)
-  titles.add(safeTitle(title));
-  // Try title without region codes
-  const stripped = title.replace(/\([^)]*\)/g, '').trim();
-  const safeStripped = safeTitle(stripped);
-  if (safeStripped && safeStripped !== safeTitle(title)) titles.add(safeStripped);
-
-  for (const sub of subdirs) {
-    for (const t of titles) {
-      urls.push(buildEncodedUrl(dir, sub, t));
+    for (const sub of subdirs) {
+      for (const t of titles) {
+        const url = buildEncodedUrl(dir, sub, t);
+        const result = await tryFetchImage(url);
+        if (result) return result;
+      }
     }
   }
 
-  for (const url of urls) {
-    try {
-      const valid = await urlExists(url);
-      if (valid) return url;
-    } catch { /* try next */ }
-  }
+  // Source 2: MobyGames (generic)
+  const mbResult = await tryMobyGames(title);
+  if (mbResult) return mbResult;
+
   return undefined;
+}
+
+function fetchText(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const req = httpsGet(url, { headers: { 'User-Agent': 'OmniEmu/0.1.1' }, timeout: 10000 }, (res) => {
+      let data = '';
+      res.on('data', (chunk: string) => data += chunk);
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+  });
 }
 
 function urlExists(url: string): Promise<boolean> {

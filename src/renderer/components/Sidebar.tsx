@@ -1,6 +1,6 @@
 import React from 'react';
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller';
+type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller' | 'utilities';
 
 interface SidebarProps {
   currentPage: Page;
@@ -12,6 +12,7 @@ const navItems: { page: Page; label: string; icon: string }[] = [
   { page: 'emulators', label: 'Emulators', icon: '🕹️' },
   { page: 'library', label: 'Game Library', icon: '📚' },
   { page: 'controller', label: 'Controller', icon: '🎮' },
+  { page: 'utilities', label: 'Utilities', icon: '🔧' },
   { page: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 

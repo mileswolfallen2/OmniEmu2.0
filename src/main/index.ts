@@ -4,6 +4,8 @@ import { existsSync } from 'fs';
 import { registerIpcHandlers } from './ipc';
 import { settings } from './settings';
 import { isMacOS } from './platform';
+import { ensureRomsStructure } from './emulators';
+import { setupAutoUpdater } from './updater';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -34,6 +36,10 @@ function createAppIcon() {
 
 function createWindow(): void {
   const icon = createAppIcon();
+
+  if (isMacOS()) {
+    app.dock?.setIcon(icon);
+  }
 
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -81,6 +87,7 @@ function createWindow(): void {
 function createTray(): void {
   const icon = createAppIcon();
   const trayIcon = icon.resize({ width: 22, height: 22 });
+  if (isMacOS()) trayIcon.setTemplateImage(true);
 
   tray = new Tray(trayIcon);
   tray.setToolTip('OmniEmu');
@@ -110,6 +117,8 @@ if (!gotLock) {
 }
 
 app.whenReady().then(() => {
+  ensureRomsStructure();
+  setupAutoUpdater();
   registerIpcHandlers();
   createWindow();
   createTray();

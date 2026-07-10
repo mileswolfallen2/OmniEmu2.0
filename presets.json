@@ -41,7 +41,7 @@
       "name": "OmniEmu Recommended",
       "description": "Universal RetroArch config with optimal defaults",
       "files": {
-        "retroarch.cfg": "video_driver = \"vulkan\"\naudio_driver = \"pulseaudio\"\nvideo_fullscreen = true\nvideo_vsync = true\nvideo_scale_integer = false\nvideo_smooth = true\naudio_sync = true\nsavestate_thumbnail_enable = true\nnotification_show_autoconfig = false\ninput_autodetect_enable = \"true\"\ninput_player1_joypad_index = \"0\"\n"
+        "retroarch.cfg": "video_driver = \"vulkan\"\naudio_driver = \"pulseaudio\"\nvideo_fullscreen = true\nvideo_vsync = true\nvideo_scale_integer = false\nvideo_smooth = true\naudio_sync = true\nsavestate_thumbnail_enable = true\nnotification_show_autoconfig = false\ninput_autodetect_enable = \"true\"\ninput_player1_joypad_index = \"0\"\n# Default cores per system\nnes_default_core = \"nestopia_libretro\"\nsnes_default_core = \"snes9x_libretro\"\nn64_default_core = \"mupen64plus_next_libretro\"\ngb_default_core = \"gambatte_libretro\"\ngbc_default_core = \"gambatte_libretro\"\ngba_default_core = \"mgba_libretro\"\nnds_default_core = \"melonds_libretro\"\n"
       }
     },
     {
@@ -67,6 +67,24 @@
       "description": "Optimal DuckStation settings for PS1 emulation",
       "files": {
         "settings.ini": "[General]\nUserMode = 0\nStartFullscreen = True\n[Display]\nRenderToMain = True\nFullscreen = True\nVSync = True\n[GPU]\nRenderer = Vulkan\nResolutionScale = 3\nMultisamples = 1\nPGXPEnable = True\nPGXPCulling = True\nWidescreenHack = True\n[Input]\nControllerBackend = SDL\n[ControllerPort0]\nMultitapPort1 = false\n"
+      }
+    }
+  ],
+  "ppsspp": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "PPSSPP optimized settings",
+      "files": {
+        "ppsspp.ini": "[Graphics]\nBackend = Vulkan\nDisplayRes = Auto\nFrameSkip = 0\nVSync = True\n[System]\nLanguage = en\n[Control]\nShowTouchControls = False\n"
+      }
+    }
+  ],
+  "melonds": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "melonDS optimized settings",
+      "files": {
+        "melonDS.ini": "[General]\nfullscreen = 1\n[Video]\nrenderer = OpenGL\nvsync = 1\n[Audio]\nvolume = 100\n[Controls]\n"
       }
     }
   ]

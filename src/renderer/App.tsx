@@ -1,17 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { EmulatorsPage } from './pages/EmulatorsPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ControllerPage } from './pages/ControllerPage';
+import { UtilitiesPage } from './pages/UtilitiesPage';
 import { useGamepadNav } from './hooks/useGamepadNav';
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller';
+type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller' | 'utilities';
+
+export function applyTheme(theme: string) {
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+}
 
 export function App() {
   useGamepadNav();
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+
+  useEffect(() => {
+    window.omni.settings.get().then((s) => applyTheme(s.theme));
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -25,6 +39,8 @@ export function App() {
         return <SettingsPage />;
       case 'controller':
         return <ControllerPage />;
+      case 'utilities':
+        return <UtilitiesPage />;
     }
   };
 
@@ -34,6 +50,7 @@ export function App() {
     library: 'Game Library',
     settings: 'Settings',
     controller: 'Controller',
+    utilities: 'Utilities',
   };
 
   return (

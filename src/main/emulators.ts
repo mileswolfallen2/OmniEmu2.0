@@ -1,5 +1,5 @@
 import { execSync, exec, ChildProcess } from 'child_process';
-import { existsSync, mkdirSync, readdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, renameSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import { app } from 'electron';
 import {
@@ -29,7 +29,7 @@ export const knownEmulators: EmulatorConfig[] = [
     downloads: {
       win32: [
         {
-          url: 'https://dl.dolphin-emu.org/releases/2412/dolphin-2412-x64.7z',
+          url: 'https://dl.dolphin-emu.org/releases/2606/dolphin-2606-x64.7z',
           format: '7z',
           executablePath: 'Dolphin.exe',
           arch: 'x64',
@@ -37,14 +37,8 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
       darwin: [
         {
-          url: 'https://dl.dolphin-emu.org/releases/2412/dolphin-2412-universal.dmg',
+          url: 'https://dl.dolphin-emu.org/releases/2606/dolphin-2606-universal.dmg',
           format: 'dmg',
-          arch: 'arm64',
-        },
-        {
-          url: 'https://dl.dolphin-emu.org/releases/2412/dolphin-2412-x64.dmg',
-          format: 'dmg',
-          arch: 'x64',
         },
       ],
       linux: [
@@ -75,14 +69,14 @@ export const knownEmulators: EmulatorConfig[] = [
     downloads: {
       win32: [
         {
-          url: 'https://github.com/RPCS3/rpcs3-binaries-win/releases/download/build-d2c3b344332efc6e545a09ad44b9f083c2a1a519/rpcs3-v0.0.34-17491-d2c3b344_win64.7z',
+          url: 'https://github.com/RPCS3/rpcs3-binaries-win/releases/download/build-4003b017f55f6ba3793469f35927cb5a2815cd22/rpcs3-v0.0.41-19563-4003b017_win64_msvc.7z',
           format: '7z',
           executablePath: 'rpcs3.exe',
         },
       ],
       linux: [
         {
-          url: 'https://github.com/RPCS3/rpcs3-binaries-linux/releases/download/build-d2c3b344332efc6e545a09ad44b9f083c2a1a519/rpcs3-v0.0.34-17491-d2c3b344_linux64.AppImage',
+          url: 'https://github.com/RPCS3/rpcs3-binaries-linux/releases/download/build-4003b017f55f6ba3793469f35927cb5a2815cd22/rpcs3-v0.0.41-19563-4003b017_linux64.AppImage',
           format: 'appimage',
         },
       ],
@@ -145,25 +139,21 @@ export const knownEmulators: EmulatorConfig[] = [
     downloads: {
       win32: [
         {
-          url: 'https://github.com/PCSX2/pcsx2/releases/download/v2.3.200/pcsx2-v2.3.200-windows-x64-installer.exe',
-          format: 'exe',
+          url: 'https://github.com/PCSX2/pcsx2/releases/download/v2.6.3/pcsx2-v2.6.3-windows-x64-Qt.7z',
+          format: '7z',
+          executablePath: 'pcsx2-qt.exe',
         },
       ],
       darwin: [
         {
-          url: 'https://github.com/PCSX2/pcsx2/releases/download/v2.3.200/pcsx2-v2.3.200-macos-arm64.dmg',
-          format: 'dmg',
-          arch: 'arm64',
-        },
-        {
-          url: 'https://github.com/PCSX2/pcsx2/releases/download/v2.3.200/pcsx2-v2.3.200-macos-x64.dmg',
-          format: 'dmg',
-          arch: 'x64',
+          url: 'https://github.com/PCSX2/pcsx2/releases/download/v2.6.3/pcsx2-v2.6.3-macos-Qt.tar.xz',
+          format: 'tar.xz',
+          executablePath: 'PCSX2.app/Contents/MacOS/PCSX2',
         },
       ],
       linux: [
         {
-          url: 'https://github.com/PCSX2/pcsx2/releases/download/v2.3.200/pcsx2-v2.3.200-linux-x86_64.AppImage',
+          url: 'https://github.com/PCSX2/pcsx2/releases/download/v2.6.3/pcsx2-v2.6.3-linux-appimage-x64-Qt.AppImage',
           format: 'appimage',
         },
       ],
@@ -189,19 +179,21 @@ export const knownEmulators: EmulatorConfig[] = [
     downloads: {
       win32: [
         {
-          url: 'https://github.com/mamedev/mame/releases/download/mame0276/mame0276_64bit.7z',
-          format: '7z',
+          url: 'https://github.com/mamedev/mame/releases/download/mame0288/mame0288b_x64.exe',
+          format: 'exe',
+          installerType: 'nsis',
           executablePath: 'mame64.exe',
         },
       ],
       linux: [
         {
-          url: 'https://github.com/mamedev/mame/releases/download/mame0276/mame0276-x86_64.AppImage',
-          format: 'appimage',
+          url: 'https://github.com/mamedev/mame/releases/download/mame0288/mame0288lx.zip',
+          format: 'zip',
+          executablePath: 'mame',
         },
       ],
     },
-    packageNames: { linux: 'mame' },
+    packageNames: { linux: 'mame', darwin: 'mame' },
     supported: true,
     websiteUrl: {
       win32: 'https://www.mamedev.org/release.html',
@@ -279,7 +271,7 @@ export const knownEmulators: EmulatorConfig[] = [
         {
           url: 'https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch.7z',
           format: '7z',
-          executablePath: 'RetroArch.exe',
+          executablePath: 'retroarch.exe',
         },
         {
           url: 'https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch_cores.7z',
@@ -323,6 +315,78 @@ export const knownEmulators: EmulatorConfig[] = [
       win32: 'https://retroarch.com/?page=platforms',
       darwin: 'https://retroarch.com/?page=platforms',
       linux: 'https://retroarch.com/?page=platforms',
+    },
+  },
+  {
+    id: 'ppsspp',
+    name: 'PPSSPP',
+    description: 'PlayStation Portable emulator',
+    platforms: ['psp'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\PPSSPP\\PPSSPP.exe',
+      darwin: '/Applications/PPSSPP.app/Contents/MacOS/PPSSPP',
+      linux: '/usr/bin/ppsspp',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/hrydgard/ppsspp/releases/download/v1.20.4/ppsspp_win64_v1.20.4.7z',
+          format: '7z',
+          executablePath: 'PPSSPPWindows64.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/hrydgard/ppsspp/releases/download/v1.20.4/PPSSPPSDL-macOS-v1.20.4.zip',
+          format: 'zip',
+          executablePath: 'PPSSPPSDL.app/Contents/MacOS/PPSSPPSDL',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/hrydgard/ppsspp/releases/download/v1.20.4/PPSSPPSDL_Linux-x64_v1.20.4.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://www.ppsspp.org/download/',
+      darwin: 'https://www.ppsspp.org/download/',
+      linux: 'https://www.ppsspp.org/download/',
+    },
+  },
+  {
+    id: 'melonds',
+    name: 'melonDS',
+    description: 'Nintendo DS emulator',
+    platforms: ['nds'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\melonDS\\melonDS.exe',
+      darwin: '/Applications/melonDS.app/Contents/MacOS/melonDS',
+      linux: '/usr/bin/melonds',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/melonDS-emu/melonDS/releases/download/1.1/melonDS-1.1-win64.zip',
+          format: 'zip',
+          executablePath: 'melonDS.exe',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/melonDS-emu/melonDS/releases/download/1.1/melonDS-1.1-appimage-x86_64.zip',
+          format: 'zip',
+          executablePath: 'melonDS-x86_64.AppImage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://melonds.kuribo64.net/',
+      darwin: 'https://melonds.kuribo64.net/',
+      linux: 'https://melonds.kuribo64.net/',
     },
   },
 ];
@@ -460,11 +524,15 @@ export function checkEmulator(id: string): EmulatorState {
   const path = detectEmulatorPath(config);
   const version = path ? detectVersion(path) : undefined;
 
+  const hasDownload = config.downloads[platform] && config.downloads[platform]!.length > 0;
+  const hasPackage = !!config.packageNames?.[platform];
+  const configClone = { ...config, supported: hasDownload || hasPackage };
+
   return {
     installed: !!path,
     version,
     path,
-    config,
+    config: configClone,
     configured: !!path && existsSync(join(app.getPath('userData'), 'configs', `${id}.configured`)),
   };
 }
@@ -573,16 +641,34 @@ function launchArgs(emulatorId: string, romPath: string): string {
   }
 }
 
+const defaultRomsDir = () => join(require('os').homedir(), 'Documents', 'roms');
+
+const romsSubdirs = [
+  'nes', 'snes', 'n64', 'gb', 'gbc', 'gba', 'nds',
+  'ps1', 'ps2', 'ps3', 'psp', 'gc', 'wii', 'switch',
+  'arcade', 'pce', 'sega-md', 'sega-saturn', 'sega-dc', 'dreamcast',
+  'other',
+];
+
+export function ensureRomsStructure(romsDir?: string): void {
+  const dir = romsDir || settings.get().romsDirectory || defaultRomsDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  for (const sub of romsSubdirs) {
+    const subDir = join(dir, sub);
+    if (!existsSync(subDir)) mkdirSync(subDir, { recursive: true });
+  }
+}
+
 export function getRomsDirectory(): string {
   const s = settings.get();
-  if (s.romsDirectory && existsSync(s.romsDirectory)) return s.romsDirectory;
-
-  const home = require('os').homedir();
-  const defaultDir = join(home, 'OmniEmu', 'roms');
-  if (!existsSync(defaultDir)) {
-    mkdirSync(defaultDir, { recursive: true });
+  if (s.romsDirectory && existsSync(s.romsDirectory)) {
+    ensureRomsStructure(s.romsDirectory);
+    return s.romsDirectory;
   }
-  return defaultDir;
+
+  const dir = defaultRomsDir();
+  ensureRomsStructure(dir);
+  return dir;
 }
 
 export function getEmulatorsDirectory(): string {
@@ -595,15 +681,17 @@ export function getEmulatorsDirectory(): string {
 }
 
 export function scanRoms(directory: string): GameEntry[] {
+  ensureRomsStructure(directory);
   const romExtensions = [
     '.nes', '.sfc', '.smc', '.n64', '.z64', '.v64',
     '.gba', '.gb', '.gbc', '.nds', '.iso', '.bin', '.cue',
     '.wbfs', '.wad', '.nsp', '.xci', '.pkg', '.chd',
     '.gcm', '.gcz', '.rvz', '.m3u', '.ps2', '.cso',
-    '.rom', '.zip', '.7z',
+    '.rom', '.zip', '.7z', '.gdi', '.pbp',
   ];
 
   const entries: GameEntry[] = [];
+  const emuPrefs = settings.get().systemEmulators ?? {};
 
   function scanDir(dir: string) {
     try {
@@ -616,12 +704,27 @@ export function scanRoms(directory: string): GameEntry[] {
         } else {
           const ext = extname(file).toLowerCase();
           if (romExtensions.includes(ext)) {
+            const platform = guessPlatform(ext, dir);
+            const dirName = basename(dir).toLowerCase();
+            const inCorrectDir = romsSubdirs.includes(dirName) && (dirHints[dirName] === platform || dirName === platform);
+
+            let finalPath = fullPath;
+            if (!inCorrectDir) {
+              const targetDir = join(directory, platform);
+              if (!existsSync(targetDir)) mkdirSync(targetDir, { recursive: true });
+              const targetPath = join(targetDir, file);
+              try {
+                renameSync(fullPath, targetPath);
+                finalPath = targetPath;
+              } catch { /* skip if move fails */ }
+            }
+
             entries.push({
-              id: fullPath,
-              romPath: fullPath,
+              id: finalPath,
+              romPath: finalPath,
               title: basename(file, ext),
-              platform: guessPlatform(ext),
-              emulatorId: guessEmulator(ext),
+              platform,
+              emulatorId: emuPrefs[platform] ?? guessEmulator(ext, platform),
               playCount: 0,
               addedAt: new Date().toISOString(),
             });
@@ -635,17 +738,47 @@ export function scanRoms(directory: string): GameEntry[] {
   return applyCachedCovers(entries);
 }
 
-function guessPlatform(ext: string): string {
+const dirHints: Record<string, string> = {
+  psp: 'psp', ppsspp: 'psp',
+  dreamcast: 'dreamcast', dc: 'dreamcast',
+  saturn: 'sega-saturn', 'sega-saturn': 'sega-saturn', 'sega saturn': 'sega-saturn',
+  ps1: 'ps1', psx: 'ps1', playstation: 'ps1', 'playstation 1': 'ps1',
+  ps2: 'ps2', 'playstation 2': 'ps2',
+  ps3: 'ps3', 'playstation 3': 'ps3',
+  gc: 'gc', gamecube: 'gc', 'game cube': 'gc',
+  wii: 'wii',
+  switch: 'switch', nsw: 'switch',
+  nes: 'nes', famicom: 'nes',
+  snes: 'snes', 'super nintendo': 'snes', superfamicom: 'snes', sfc: 'snes',
+  n64: 'n64', 'nintendo 64': 'n64',
+  gba: 'gba', 'game boy advance': 'gba',
+  gb: 'gb', 'game boy': 'gb',
+  gbc: 'gbc', 'game boy color': 'gbc',
+  nds: 'nds', ds: 'nds', 'nintendo ds': 'nds',
+  arcade: 'arcade', mame: 'arcade',
+  'sega-md': 'sega-md', 'sega genesis': 'sega-md', genesis: 'sega-md', megadrive: 'sega-md', 'mega drive': 'sega-md',
+  'sega-dc': 'dreamcast',
+};
+
+function guessPlatform(ext: string, dirPath?: string): string {
+  if (dirPath) {
+    const dirName = basename(dirPath).toLowerCase().replace(/[^a-z0-9\s-]/g, '');
+    const hint = dirHints[dirName];
+    if (hint) return hint;
+  }
+
   const map: Record<string, string> = {
     '.nes': 'nes', '.sfc': 'snes', '.smc': 'snes',
     '.n64': 'n64', '.z64': 'n64', '.v64': 'n64',
     '.gba': 'gba', '.gb': 'gb', '.gbc': 'gbc', '.nds': 'nds',
-    '.iso': 'ps1', '.bin': 'ps1', '.cue': 'ps1',
+    '.iso': 'ps1', '.bin': 'ps1', '.cue': 'ps1', '.chd': 'ps1',
     '.wbfs': 'wii', '.wad': 'wii',
     '.nsp': 'switch', '.xci': 'switch',
-    '.pkg': 'ps3', '.chd': 'ps1',
+    '.pkg': 'ps3',
     '.gcm': 'gc', '.gcz': 'gc', '.rvz': 'gc',
     '.ps2': 'ps2', '.cso': 'ps2',
+    '.gdi': 'dreamcast',
+    '.pbp': 'psp',
   };
   return map[ext] || 'other';
 }
@@ -667,7 +800,23 @@ export function uninstallEmulator(id: string): boolean {
   return removed;
 }
 
-function guessEmulator(ext: string): string {
+function guessEmulator(ext: string, platform?: string): string {
+  if (platform) {
+    const platformMap: Record<string, string> = {
+      psp: 'ppsspp',
+      dreamcast: 'retroarch',
+      'sega-saturn': 'retroarch',
+      'sega-dc': 'retroarch',
+      'sega-md': 'retroarch',
+      pce: 'retroarch',
+      nes: 'retroarch', snes: 'retroarch', n64: 'retroarch',
+      gb: 'retroarch', gbc: 'retroarch', gba: 'retroarch',
+      nds: 'retroarch',
+    };
+    const mapped = platformMap[platform];
+    if (mapped) return mapped;
+  }
+
   const map: Record<string, string> = {
     '.nes': 'retroarch', '.sfc': 'retroarch', '.smc': 'retroarch',
     '.n64': 'retroarch', '.z64': 'retroarch', '.v64': 'retroarch',
@@ -677,9 +826,22 @@ function guessEmulator(ext: string): string {
     '.nsp': 'eden', '.xci': 'eden', '.nca': 'eden',
     '.pkg': 'rpcs3',
     '.bin': 'duckstation', '.cue': 'duckstation', '.iso': 'duckstation',
-    '.img': 'duckstation', '.m3u': 'duckstation', '.pbp': 'duckstation',
+    '.img': 'duckstation', '.m3u': 'duckstation',
     '.chd': 'duckstation', '.ecm': 'duckstation', '.mds': 'duckstation',
     '.ps2': 'pcsx2', '.cso': 'pcsx2',
+    '.gdi': 'retroarch',
+    '.pbp': 'ppsspp',
   };
   return map[ext] || 'retroarch';
+}
+
+export function getSystemEmulators(): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const emu of knownEmulators) {
+    for (const sys of emu.platforms) {
+      if (!map[sys]) map[sys] = [];
+      map[sys].push(emu.id);
+    }
+  }
+  return map;
 }

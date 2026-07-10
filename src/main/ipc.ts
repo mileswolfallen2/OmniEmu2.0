@@ -12,11 +12,14 @@ import {
   findEmulator,
   getRomsDirectory,
   getEmulatorsDirectory,
+  getSystemEmulators,
+  ensureRomsStructure,
 } from './emulators';
 import { installEmulator, findInstalledBinary } from './installer';
 import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerConfig } from './configurator';
 import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
+import { checkForUpdates, downloadUpdate, quitAndInstall } from './updater';
 import { InstallProgress, AppSettings, GameEntry } from '../shared/types';
 import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers } from './scraper';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
@@ -27,7 +30,15 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('system:platform-name', () => platformName());
 
   // Emulators
-  ipcMain.handle('emulators:list', () => knownEmulators);
+  ipcMain.handle('emulators:list', () => {
+    const plat = getPlatform();
+    return knownEmulators.filter(e => {
+      const hasDownload = e.downloads?.[plat] && e.downloads[plat]!.length > 0;
+      const hasPackage = !!e.packageNames?.[plat];
+      return hasDownload || hasPackage;
+    });
+  });
+  ipcMain.handle('emulators:system-assignments', () => getSystemEmulators());
   ipcMain.handle('emulators:states', () => getAllEmulatorStates());
   ipcMain.handle('emulators:check', (_event, id: string) => checkEmulator(id));
 
@@ -42,7 +53,8 @@ export function registerIpcHandlers(): void {
       const platform = getPlatform();
       const arch = getArch();
       const downloads = config.downloads[platform];
-      if (!downloads || downloads.length === 0)
+      const packageName = config.packageNames?.[platform];
+      if ((!downloads || downloads.length === 0) && !packageName)
         throw new Error(`No downloads available for ${emulatorId} on ${platform}`);
 
       const win = BrowserWindow.fromWebContents(event.sender);
@@ -50,10 +62,10 @@ export function registerIpcHandlers(): void {
         win?.webContents.send('emulators:install-progress', p);
       };
 
-      const installDir = await installEmulator(emulatorId, downloads, platform, arch, sendProgress);
+      const installDir = await installEmulator(emulatorId, downloads ?? [], platform, arch, sendProgress, config.packageNames?.[platform]);
 
       // Try to find the binary and create a symlink or record it
-      const download = downloads.filter((d) => !d.arch || d.arch === arch)[0];
+      const download = (downloads ?? []).filter((d) => !d.arch || d.arch === arch)[0];
       const binary = findInstalledBinary(emulatorId, installDir, download?.executablePath);
       if (binary) {
         const marker = join(installDir, '.installed');
@@ -217,4 +229,26 @@ export function registerIpcHandlers(): void {
   // Paths
   ipcMain.handle('paths:roms-directory', () => getRomsDirectory());
   ipcMain.handle('paths:emulators-directory', () => getEmulatorsDirectory());
+
+  // Utilities
+  ipcMain.handle('utilities:regenerate-roms-structure', () => {
+    ensureRomsStructure();
+    return true;
+  });
+
+  // Updates
+  ipcMain.handle('updates:check', async () => {
+    await checkForUpdates();
+    return true;
+  });
+
+  ipcMain.handle('updates:download', async () => {
+    await downloadUpdate();
+    return true;
+  });
+
+  ipcMain.handle('updates:quit-and-install', async () => {
+    quitAndInstall();
+    return true;
+  });
 }

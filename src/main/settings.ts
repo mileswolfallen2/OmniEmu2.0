@@ -9,8 +9,17 @@ function getSettingsPath(): string {
   return join(app.getPath('userData'), SETTINGS_FILE);
 }
 
+function defaultRomsDir(): string {
+  try {
+    const { homedir } = require('os');
+    return join(homedir(), 'Documents', 'roms');
+  } catch {
+    return join(app.getPath('userData'), 'roms');
+  }
+}
+
 const defaultSettings: AppSettings = {
-  romsDirectory: '',
+  romsDirectory: defaultRomsDir(),
   emulatorsDirectory: '',
   theme: 'dark',
   minimiseToTray: true,

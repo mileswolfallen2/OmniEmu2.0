@@ -135,6 +135,14 @@ savestate_thumbnail_enable = true
 notification_show_autoconfig = false
 input_autodetect_enable = "true"
 input_player1_joypad_index = "0"
+# Default cores per system
+nes_default_core = "nestopia_libretro"
+snes_default_core = "snes9x_libretro"
+n64_default_core = "mupen64plus_next_libretro"
+gb_default_core = "gambatte_libretro"
+gbc_default_core = "gambatte_libretro"
+gba_default_core = "mgba_libretro"
+nds_default_core = "melonds_libretro"
 `,
       },
     },

@@ -5,7 +5,7 @@ export interface EmulatorDownload {
   url: string;
   /** Archive type: 'exe' = direct installer, 'msi' = windows msi,
    *  'dmg' = macOS disk image, 'appimage' = linux appimage,
-   *  'tar.gz' | 'tar.bz2' | 'zip' = archive to extract,
+   *  'tar.gz' | 'tar.bz2' | 'tar.xz' | 'zip' = archive to extract,
    *  'pkg' = macOS installer, '7z' = 7zip archive */
   format: string;
   /** Path inside archive to the executable (if archive format) */
@@ -14,6 +14,8 @@ export interface EmulatorDownload {
   size?: number;
   /** Only for this arch (omitted = all arches) */
   arch?: Arch;
+  /** Installer type for exe format: 'nsis' (default), 'inno' */
+  installerType?: 'nsis' | 'inno';
 }
 
 export interface EmulatorConfig {
@@ -92,6 +94,8 @@ export interface AppSettings {
   recentGames: GameEntry[];
   /** Directory for BIOS files */
   biosDirectory: string;
+  /** Per-system preferred emulator override: systemId -> emulatorId */
+  systemEmulators?: Record<string, string>;
 }
 
 export interface SystemInfo {
@@ -107,4 +111,15 @@ export interface EmulatorState {
   path?: string;
   config: EmulatorConfig;
   configured: boolean;
+}
+
+export interface UpdateInfo {
+  available: boolean;
+  latestVersion: string;
+  currentVersion: string;
+  releaseUrl: string;
+  assetName?: string;
+  assetUrl?: string;
+  assetSize?: number;
+  releaseNotes?: string;
 }

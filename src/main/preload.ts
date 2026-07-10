@@ -17,6 +17,8 @@ const api = {
 
   emulators: {
     list: (): Promise<EmulatorConfig[]> => ipcRenderer.invoke('emulators:list'),
+    systemAssignments: (): Promise<Record<string, string[]>> =>
+      ipcRenderer.invoke('emulators:system-assignments'),
     states: (): Promise<EmulatorState[]> => ipcRenderer.invoke('emulators:states'),
     check: (id: string): Promise<EmulatorState> =>
       ipcRenderer.invoke('emulators:check', id),
@@ -100,6 +102,27 @@ const api = {
     romsDirectory: (): Promise<string> => ipcRenderer.invoke('paths:roms-directory'),
     emulatorsDirectory: (): Promise<string> =>
       ipcRenderer.invoke('paths:emulators-directory'),
+  },
+
+  utilities: {
+    regenerateRomsStructure: (): Promise<boolean> =>
+      ipcRenderer.invoke('utilities:regenerate-roms-structure'),
+  },
+
+  updates: {
+    check: (): Promise<boolean> => ipcRenderer.invoke('updates:check'),
+    download: (): Promise<boolean> => ipcRenderer.invoke('updates:download'),
+    quitAndInstall: (): Promise<boolean> => ipcRenderer.invoke('updates:quit-and-install'),
+    onStatus: (cb: (status: Record<string, unknown>) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, s: Record<string, unknown>) => cb(s);
+      ipcRenderer.on('updates:status', handler);
+      return () => ipcRenderer.removeListener('updates:status', handler);
+    },
+    onDownloadProgress: (cb: (progress: Record<string, unknown>) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, p: Record<string, unknown>) => cb(p);
+      ipcRenderer.on('updates:download-progress', handler);
+      return () => ipcRenderer.removeListener('updates:download-progress', handler);
+    },
   },
 };
 
