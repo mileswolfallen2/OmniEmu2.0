@@ -75,6 +75,8 @@ const api = {
     clearRecent: (): Promise<boolean> => ipcRenderer.invoke('games:clear-recent'),
     scrapeArt: (title: string, platform: string): Promise<string | undefined> =>
       ipcRenderer.invoke('games:scrape-art', title, platform),
+    cacheCovers: (entries: { romPath: string; coverUrl: string }[]): Promise<boolean> =>
+      ipcRenderer.invoke('games:cache-covers', entries),
   },
 
   bios: {

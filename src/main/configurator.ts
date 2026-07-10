@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { app } from 'electron';
 import { ConfigPreset, InstallProgress, Platform } from '../shared/types';
@@ -6,11 +6,8 @@ import { getPlatform, isWindows, isMacOS } from './platform';
 
 const platform = getPlatform();
 
-/**
- * Built-in recommended presets for each emulator.
- * These are known-good configs curated by the EmuDeck community and
- * adapted for OmniEmu. They set optimal performance/quality balances.
- */
+// ---- Built-in presets ----
+
 const builtInPresets: Record<string, ConfigPreset[]> = {
   dolphin: [
     {
@@ -35,6 +32,9 @@ MMU = False
 [Enhancements]
 InternalResolution = 3
 MaxAnisotropy = 4
+[Android]
+SIDevice0 = 6
+AdapterRumble0 = True
 `,
         'Config/GFX.ini': `[Settings]
 Backend = Vulkan
@@ -87,7 +87,8 @@ CPU:
   "aspect_ratio": "16:9",
   "enable_vsync": true,
   "shader_cache": true,
-  "audio_backend": "OpenAL"
+  "audio_backend": "OpenAL",
+  "controller": "SDL"
 }`,
       },
     },
@@ -110,6 +111,10 @@ Renderer = Vulkan
 UpscaleMultiplier = 3
 BilinearFilter = 1
 TrilinearFilter = 1
+[Pad]
+MultitapPort0_Enabled = false
+MultitapPort1_Enabled = false
+Pad1 = SDL
 `,
       },
     },
@@ -121,7 +126,6 @@ TrilinearFilter = 1
       files: {
         'retroarch.cfg': `video_driver = "vulkan"
 audio_driver = "pulseaudio"
-input_driver = "udev"
 video_fullscreen = true
 video_vsync = true
 video_scale_integer = false
@@ -129,6 +133,30 @@ video_smooth = true
 audio_sync = true
 savestate_thumbnail_enable = true
 notification_show_autoconfig = false
+input_autodetect_enable = "true"
+input_player1_joypad_index = "0"
+`,
+      },
+    },
+    {
+      name: 'OmniEmu Performance',
+      description: 'Performance-focused RetroArch config',
+      files: {
+        'retroarch.cfg': `video_driver = "vulkan"
+audio_driver = "pulseaudio"
+video_fullscreen = true
+video_threaded = true
+video_vsync = false
+video_max_swapchain_images = 2
+video_scale_integer = false
+video_smooth = false
+audio_sync = false
+audio_rate_control = false
+rewind_enable = false
+savestate_auto_load = false
+savestate_auto_save = false
+input_autodetect_enable = "true"
+input_player1_joypad_index = "0"
 `,
       },
     },
@@ -149,6 +177,8 @@ waitvsync 1
 syncrefresh 0
 sleep 0
 autosave 0
+joystick 1
+keyboard 0
 `,
       },
     },
@@ -172,20 +202,28 @@ Multisamples = 1
 PGXPEnable = True
 PGXPCulling = True
 WidescreenHack = True
+[Input]
+ControllerBackend = SDL
+[ControllerPort0]
+MultitapPort1 = false
 `,
       },
     },
   ],
 };
 
+// ---- Remote presets URL ----
+
 const presetSourceUrl = 'https://raw.githubusercontent.com/mileswolfallen2/omniemu-presets/main/presets.json';
 
-/** Fetch remote presets, falling back to built-in */
 async function fetchRemotePresets(): Promise<Record<string, ConfigPreset[]> | null> {
   try {
     const { get } = await import('https');
     const data = await new Promise<string>((resolve, reject) => {
-      get(presetSourceUrl, (res) => {
+      get(presetSourceUrl, {
+        headers: { 'User-Agent': 'OmniEmu/0.1.0' },
+        timeout: 10000,
+      }, (res) => {
         if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
         const chunks: Buffer[] = [];
         res.on('data', (c: Buffer) => chunks.push(c));
@@ -198,18 +236,44 @@ async function fetchRemotePresets(): Promise<Record<string, ConfigPreset[]> | nu
   }
 }
 
+/** Load presets from a local file in userData (user can drop their own presets.json there) */
+function loadLocalPresets(): Record<string, ConfigPreset[]> | null {
+  const localPath = join(app.getPath('userData'), 'presets.json');
+  try {
+    return JSON.parse(readFileSync(localPath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function isPSController(name?: string): boolean {
+  if (!name) return false;
+  const l = name.toLowerCase();
+  return l.includes('dualsense') || l.includes('dualshock') || l.includes('sony')
+    || l.includes('ps4') || l.includes('ps5') || l.includes('playstation');
+}
+
+function isXboxController(name?: string): boolean {
+  if (!name) return false;
+  const l = name.toLowerCase();
+  return l.includes('xbox') || l.includes('x-input') || l.includes('microsoft');
+}
+
+// ---- Exported API ----
+
 export function getBuiltInPresets(): Record<string, ConfigPreset[]> {
   return builtInPresets;
 }
 
 export async function getPresets(emulatorId: string): Promise<ConfigPreset[]> {
-  // Try remote first, fall back to built-in
+  // Priority: remote > local file > built-in
   const remote = await fetchRemotePresets();
   if (remote && remote[emulatorId]) return remote[emulatorId];
+  const local = loadLocalPresets();
+  if (local && local[emulatorId]) return local[emulatorId];
   return builtInPresets[emulatorId] || [];
 }
 
-/** Get the config directory for an emulator given its install path */
 function getConfigDir(emulatorId: string, installPath: string): string {
   const platformDirs: Record<string, Record<string, string>> = {
     dolphin: {
@@ -251,14 +315,12 @@ function getConfigDir(emulatorId: string, installPath: string): string {
   return platformDirs[emulatorId]?.[platform] || dirname(installPath);
 }
 
-/** Check if an emulator has been configured with OmniEmu presets */
 export function checkConfigured(emulatorId: string, installPath?: string): boolean {
   if (!installPath) return false;
   const marker = join(app.getPath('userData'), 'configs', `${emulatorId}.configured`);
   return existsSync(marker);
 }
 
-/** Apply a config preset to the emulator's config directory */
 export async function applyPreset(
   emulatorId: string,
   preset: ConfigPreset,
@@ -289,7 +351,6 @@ export async function applyPreset(
     report(Math.round((done / totalFiles) * 100), `Wrote ${relativePath}`);
   }
 
-  // Write marker so we know this emulator was configured
   const markerDir = join(app.getPath('userData'), 'configs');
   if (!existsSync(markerDir)) mkdirSync(markerDir, { recursive: true });
   writeFileSync(join(markerDir, `${emulatorId}.configured`), new Date().toISOString(), 'utf-8');
@@ -297,7 +358,6 @@ export async function applyPreset(
   report(100, `${emulatorId} configured with "${preset.name}"`);
 }
 
-/** Apply the recommended preset (first preset available) */
 export async function applyRecommendedConfig(
   emulatorId: string,
   installPath: string,
@@ -309,18 +369,20 @@ export async function applyRecommendedConfig(
   return true;
 }
 
-/** Write controller config for a given emulator */
+/** Write controller config for a given emulator — PS-aware */
 export function applyControllerConfig(emulatorId: string, installPath: string, controllerName?: string): boolean {
   const configDir = getConfigDir(emulatorId, installPath);
   if (!existsSync(configDir)) {
     mkdirSync(configDir, { recursive: true });
   }
 
+  const isPS = isPSController(controllerName);
+  const isXbox = isXboxController(controllerName);
+
   switch (emulatorId) {
     case 'retroarch': {
       const cfgPath = join(configDir, 'retroarch.cfg');
       const existing = existsSync(cfgPath) ? readFileSync(cfgPath, 'utf-8') : '';
-      // Append (or overwrite) controller-specific lines
       const lines = existing.split('\n').filter(l =>
         !l.startsWith('input_player1_joypad_index') &&
         !l.startsWith('input_driver') &&
@@ -328,13 +390,40 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
       );
       lines.push('input_player1_joypad_index = "0"');
       lines.push('input_autodetect_enable = "true"');
-      // Set input driver per platform
+
       if (isMacOS()) lines.push('input_driver = "hid"');
       else if (isWindows()) lines.push('input_driver = "dinput"');
       else lines.push('input_driver = "udev"');
+
+      // PS controller-specific RetroArch bindings
+      if (isPS) {
+        lines.push('input_player1_a_btn = "1"');
+        lines.push('input_player1_b_btn = "2"');
+        lines.push('input_player1_x_btn = "0"');
+        lines.push('input_player1_y_btn = "3"');
+        lines.push(`input_player1_l_btn = "4"`);
+        lines.push(`input_player1_r_btn = "5"`);
+        lines.push(`input_player1_l2_btn = "6"`);
+        lines.push(`input_player1_r2_btn = "7"`);
+        lines.push(`input_player1_select_btn = "8"`);
+        lines.push(`input_player1_start_btn = "9"`);
+      } else if (isXbox) {
+        lines.push('input_player1_a_btn = "0"');
+        lines.push('input_player1_b_btn = "1"');
+        lines.push('input_player1_x_btn = "2"');
+        lines.push('input_player1_y_btn = "3"');
+        lines.push(`input_player1_l_btn = "4"`);
+        lines.push(`input_player1_r_btn = "5"`);
+        lines.push(`input_player1_l2_btn = "6"`);
+        lines.push(`input_player1_r2_btn = "7"`);
+        lines.push(`input_player1_select_btn = "6"`);
+        lines.push(`input_player1_start_btn = "7"`);
+      }
+
       writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
       return true;
     }
+
     case 'duckstation': {
       const iniPath = join(configDir, 'settings.ini');
       const existing = existsSync(iniPath) ? readFileSync(iniPath, 'utf-8') : '';
@@ -349,6 +438,7 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
       writeFileSync(iniPath, lines.join('\n'), 'utf-8');
       return true;
     }
+
     case 'pcsx2': {
       const iniPath = join(configDir, 'inis', 'PCSX2.ini');
       const dir = dirname(iniPath);
@@ -360,10 +450,11 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
       lines.push('[Pad]');
       lines.push('MultitapPort0_Enabled = false');
       lines.push('MultitapPort1_Enabled = false');
-      lines.push('Pad1 = "SDL"');
+      lines.push(isPS ? 'Pad1 = SDL (DualShock4)' : 'Pad1 = SDL');
       writeFileSync(iniPath, lines.join('\n'), 'utf-8');
       return true;
     }
+
     case 'dolphin': {
       const iniPath = join(configDir, 'Config', 'Dolphin.ini');
       const dir = dirname(iniPath);
@@ -373,16 +464,33 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
         !l.startsWith('SIDevice') && !l.startsWith('AdapterRumble')
       );
       lines.push('[Android]');
-      lines.push('SIDevice0 = 6');
+      // 6 = Standard controller, 12 = DualShock 4
+      lines.push(isPS ? 'SIDevice0 = 12' : 'SIDevice0 = 6');
       lines.push('AdapterRumble0 = True');
       writeFileSync(iniPath, lines.join('\n'), 'utf-8');
       return true;
     }
-    case 'eden':
-    case 'rpcs3': {
-      // RPCS3/Eden don't have simple config overrides for controller
-      break;
+
+    case 'eden': {
+      const cfgPath = join(configDir, 'Config.json');
+      let cfg: any = {};
+      if (existsSync(cfgPath)) {
+        try { cfg = JSON.parse(readFileSync(cfgPath, 'utf-8')); } catch {}
+      }
+      cfg.controller = isPS ? 'DualShock4' : 'SDL';
+      writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf-8');
+      return true;
     }
+
+    case 'rpcs3': {
+      const cfgPath = join(configDir, 'config.yml');
+      const existing = existsSync(cfgPath) ? readFileSync(cfgPath, 'utf-8') : '';
+      const lines = existing.split('\n').filter(l => !l.startsWith('  PadHandler:'));
+      lines.push(isPS ? '  PadHandler: DualShock4' : '  PadHandler: SDL');
+      writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
+
     case 'mame': {
       const iniPath = join(configDir, 'mame.ini');
       const existing = existsSync(iniPath) ? readFileSync(iniPath, 'utf-8') : '';

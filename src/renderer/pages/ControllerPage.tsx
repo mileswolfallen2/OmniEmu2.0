@@ -9,11 +9,42 @@ interface ControllerState {
   connected: boolean;
 }
 
-const buttonLabels = [
-  'A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT',
-  'Back', 'Start', 'L3', 'R3', 'DPad-Up', 'DPad-Down', 'DPad-Left', 'DPad-Right',
-  'Home',
-];
+type ControllerVendor = 'xbox' | 'playstation' | 'switch' | 'generic';
+
+function detectVendor(id: string): ControllerVendor {
+  const lower = id.toLowerCase();
+  if (lower.includes('ps4') || lower.includes('ps5') || lower.includes('dualsense')
+    || lower.includes('dualshock') || lower.includes('sony') || lower.includes('wireless controller')
+    || lower.includes('playstation')) return 'playstation';
+  if (lower.includes('xbox') || lower.includes('xinput') || lower.includes('x-box')
+    || lower.includes('microsoft')) return 'xbox';
+  if (lower.includes('switch') || lower.includes('pro controller') || lower.includes('nintendo'))
+    return 'switch';
+  return 'generic';
+}
+
+const vendorLabels: Record<ControllerVendor, string[]> = {
+  playstation: [
+    'Cross', 'Circle', 'Square', 'Triangle', 'L1', 'R1', 'L2', 'R2',
+    'Share', 'Options', 'L3', 'R3', 'DPad-Up', 'DPad-Down', 'DPad-Left', 'DPad-Right',
+    'PS',
+  ],
+  xbox: [
+    'A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT',
+    'Back', 'Start', 'L3', 'R3', 'DPad-Up', 'DPad-Down', 'DPad-Left', 'DPad-Right',
+    'Home',
+  ],
+  switch: [
+    'B', 'A', 'Y', 'X', 'L', 'R', 'ZL', 'ZR',
+    '-', '+', 'L3', 'R3', 'DPad-Up', 'DPad-Down', 'DPad-Left', 'DPad-Right',
+    'Home',
+  ],
+  generic: [
+    'A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT',
+    'Back', 'Start', 'L3', 'R3', 'DPad-Up', 'DPad-Down', 'DPad-Left', 'DPad-Right',
+    'Home',
+  ],
+};
 
 export function ControllerPage() {
   const [controllers, setControllers] = useState<ControllerState[]>([]);
@@ -95,51 +126,58 @@ export function ControllerPage() {
         </div>
       )}
 
-      {controllers.map((ctrl) => (
-        <div key={ctrl.index} className="card mb-4">
-          <div className="card-header">
-            <h3>Controller {ctrl.index + 1}</h3>
-            <span className="badge badge-installed">Connected</span>
-          </div>
-          <p className="text-sm text-muted mb-2">{ctrl.id}</p>
+      {controllers.map((ctrl) => {
+        const vendor = detectVendor(ctrl.id);
+        const labels = vendorLabels[vendor];
 
-          <div className="controller-buttons">
-            {ctrl.buttons.length > 0 && buttonLabels.map((label, i) => {
-              const btn = ctrl.buttons[i];
-              if (!btn) return null;
-              return (
-                <div
-                  key={i}
-                  className={`controller-btn ${btn.pressed ? 'pressed' : ''}`}
-                >
-                  <span className="controller-btn-label">{label}</span>
-                  <span className="controller-btn-value">{btn.value.toFixed(2)}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {ctrl.axes.length > 0 && (
-            <div className="mt-2">
-              <p className="text-sm text-muted mb-2">Axes</p>
-              <div className="controller-axes">
-                {ctrl.axes.map((val, i) => (
-                  <div key={i} className="axis-bar">
-                    <span className="axis-label">Axis {i}</span>
-                    <div className="axis-track">
-                      <div
-                        className="axis-fill"
-                        style={{ left: `${((val + 1) / 2) * 100}%` }}
-                      />
-                    </div>
-                    <span className="axis-value">{val.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
+        return (
+          <div key={ctrl.index} className="card mb-4">
+            <div className="card-header">
+              <h3>
+                {vendor === 'playstation' ? '🎮 PlayStation' : vendor === 'xbox' ? '🎮 Xbox' : '🎮 Controller'} {ctrl.index + 1}
+              </h3>
+              <span className="badge badge-installed">Connected</span>
             </div>
-          )}
-        </div>
-      ))}
+            <p className="text-sm text-muted mb-2">{ctrl.id}</p>
+
+            <div className="controller-buttons">
+              {ctrl.buttons.length > 0 && labels.map((label, i) => {
+                const btn = ctrl.buttons[i];
+                if (!btn) return null;
+                return (
+                  <div
+                    key={i}
+                    className={`controller-btn ${btn.pressed ? 'pressed' : ''}`}
+                  >
+                    <span className="controller-btn-label">{label}</span>
+                    <span className="controller-btn-value">{btn.value.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {ctrl.axes.length > 0 && (
+              <div className="mt-2">
+                <p className="text-sm text-muted mb-2">Axes</p>
+                <div className="controller-axes">
+                  {ctrl.axes.map((val, i) => (
+                    <div key={i} className="axis-bar">
+                      <span className="axis-label">Axis {i}</span>
+                      <div className="axis-track">
+                        <div
+                          className="axis-fill"
+                          style={{ left: `${((val + 1) / 2) * 100}%` }}
+                        />
+                      </div>
+                      <span className="axis-value">{val.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {emulators.length > 0 && (
         <div>

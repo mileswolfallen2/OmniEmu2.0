@@ -1,4 +1,7 @@
 import { get as httpsGet } from 'https';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { app } from 'electron';
 import { GameEntry } from '../shared/types';
 
 /** Clean a filename into a display title */
@@ -49,36 +52,32 @@ function safeTitle(title: string): string {
   return title.replace(/[:]/g, '').replace(/[/\\?*]/g, '_').trim();
 }
 
-export function buildThumbnailUrl(title: string, platform: string): string | undefined {
-  const dir = platformThumbDir[platform];
-  if (!dir) return undefined;
+/** Build a properly URL-encoded thumbnail URL */
+function buildEncodedUrl(dir: string, subdir: string, title: string): string {
   const safe = safeTitle(title);
-  return `${thumbBase}/${dir}/Named_Boxarts/${safe}.png`;
+  const raw = `${thumbBase}/${dir}/${subdir}/${safe}.png`;
+  return encodeURI(raw);
 }
 
-/** Try multiple URL patterns and return the first that resolves */
+/** Try multiple URL patterns via GET and return the first valid URL */
 export async function findValidThumbnail(title: string, platform: string): Promise<string | undefined> {
   const dir = platformThumbDir[platform];
   if (!dir) return undefined;
 
   const urls: string[] = [];
-  const safe = safeTitle(title);
-  // Try with and without region info
-  const regionStripped = title.replace(/\([^)]*\)/g, '').trim();
-  const safeStripped = safeTitle(regionStripped);
-
-  const basePaths = [`${thumbBase}/${dir}`];
   const subdirs = ['Named_Boxarts', 'Named_Snaps'];
   const titles = new Set<string>();
 
-  if (safe) titles.add(safe);
-  if (safeStripped && safeStripped !== safe) titles.add(safeStripped);
+  // Try raw title (with region codes)
+  titles.add(safeTitle(title));
+  // Try title without region codes
+  const stripped = title.replace(/\([^)]*\)/g, '').trim();
+  const safeStripped = safeTitle(stripped);
+  if (safeStripped && safeStripped !== safeTitle(title)) titles.add(safeStripped);
 
-  for (const base of basePaths) {
-    for (const sub of subdirs) {
-      for (const t of titles) {
-        urls.push(`${base}/${sub}/${t}.png`);
-      }
+  for (const sub of subdirs) {
+    for (const t of titles) {
+      urls.push(buildEncodedUrl(dir, sub, t));
     }
   }
 
@@ -93,12 +92,68 @@ export async function findValidThumbnail(title: string, platform: string): Promi
 
 function urlExists(url: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const req = httpsGet(url, { method: 'HEAD' }, (res) => {
+    const req = httpsGet(url, {
+      method: 'GET',
+      headers: { 'User-Agent': 'OmniEmu/0.1.0' },
+      timeout: 10000,
+    }, (res) => {
+      // GitHub raw returns 200 for existing or redirects to it
       resolve(res.statusCode === 200);
+      res.resume(); // drain response
     });
     req.on('error', () => resolve(false));
-    req.setTimeout(5000, () => { req.destroy(); resolve(false); });
+    req.on('timeout', () => { req.destroy(); resolve(false); });
   });
+}
+
+// --- Scrape Cache ---
+
+interface ScrapeCache {
+  [key: string]: string; // "romPath" -> "coverUrl"
+}
+
+function cachePath(): string {
+  const dir = join(app.getPath('userData'), 'cache');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return join(dir, 'scrape-cache.json');
+}
+
+function readCache(): ScrapeCache {
+  try {
+    return JSON.parse(readFileSync(cachePath(), 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeCache(cache: ScrapeCache): void {
+  try {
+    writeFileSync(cachePath(), JSON.stringify(cache, null, 2), 'utf-8');
+  } catch { /* ignore */ }
+}
+
+/** Get cached cover URL for a ROM */
+export function getCachedCover(romPath: string): string | undefined {
+  return readCache()[romPath];
+}
+
+/** Save cover URLs to cache */
+export function cacheCovers(entries: { romPath: string; coverUrl: string }[]): void {
+  const cache = readCache();
+  for (const e of entries) {
+    if (e.coverUrl) cache[e.romPath] = e.coverUrl;
+  }
+  writeCache(cache);
+}
+
+/** Apply cached covers to an array of GameEntry objects (mutates in place) */
+export function applyCachedCovers(entries: GameEntry[]): GameEntry[] {
+  const cache = readCache();
+  for (const entry of entries) {
+    const cached = cache[entry.romPath];
+    if (cached) entry.coverUrl = cached;
+  }
+  return entries;
 }
 
 /** Track a game launch in the recent games list */

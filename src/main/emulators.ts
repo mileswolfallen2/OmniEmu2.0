@@ -10,6 +10,7 @@ import {
 } from '../shared/types';
 import { getPlatform, getArch, isWindows, isMacOS, isLinux } from './platform';
 import { settings } from './settings';
+import { applyCachedCovers } from './scraper';
 
 const platform = getPlatform();
 const arch = getArch();
@@ -631,7 +632,7 @@ export function scanRoms(directory: string): GameEntry[] {
   }
 
   scanDir(directory);
-  return entries;
+  return applyCachedCovers(entries);
 }
 
 function guessPlatform(ext: string): string {

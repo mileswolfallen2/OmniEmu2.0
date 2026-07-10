@@ -6,6 +6,19 @@
   padding: 0;
 }
 
+/* Focus ring for controller/keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+
+/* Game cards need special treatment since they use div click handlers */
+.game-card:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+  border-color: var(--accent);
+}
+
 :root {
   --bg-primary: #0f0f1a;
   --bg-secondary: #1a1a2e;

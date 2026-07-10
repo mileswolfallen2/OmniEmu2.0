@@ -18,7 +18,7 @@ import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerCon
 import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
 import { InstallProgress, AppSettings, GameEntry } from '../shared/types';
-import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail } from './scraper';
+import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers } from './scraper';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
 
 export function registerIpcHandlers(): void {
@@ -166,6 +166,12 @@ export function registerIpcHandlers(): void {
   // Scrape a game's art URL — accepts display title, uses scrape-friendly title internally
   ipcMain.handle('games:scrape-art', async (_event, title: string, platform: string) => {
     return findValidThumbnail(buildScrapeTitle(title), platform);
+  });
+
+  // Cache scraped cover URLs
+  ipcMain.handle('games:cache-covers', (_event, entries: { romPath: string; coverUrl: string }[]) => {
+    cacheCovers(entries);
+    return true;
   });
 
   // Settings

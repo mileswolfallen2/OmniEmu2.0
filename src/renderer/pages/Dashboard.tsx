@@ -100,6 +100,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (tab: string) => void }
               <div
                 key={game.id}
                 className="game-card"
+                tabIndex={0}
+                role="button"
                 onClick={async () => {
                   await window.omni.game.launch(game.emulatorId, game.romPath);
                   const updated = await window.omni.game.recent();

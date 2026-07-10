@@ -1,0 +1,73 @@
+{
+  "dolphin": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "Best balance of performance and quality for most systems",
+      "files": {
+        "Config/Dolphin.ini": "[General]\nLastFilename =\nShowLag = False\nShowRenderTimes = False\n[Display]\nFullscreenDisplayRes = Auto\nFullscreen = True\nRenderToMain = True\n[Interface]\nConfirmStop = False\nPauseOnFocusLost = False\n[Core]\nCPUCore = 3\nFastmem = True\nMMU = False\n[Enhancements]\nInternalResolution = 3\nMaxAnisotropy = 4\n[Android]\nSIDevice0 = 6\nAdapterRumble0 = True\n",
+        "Config/GFX.ini": "[Settings]\nBackend = Vulkan\nShaderCompilationMode = 2\nWaitForShadersBeforeStarting = True\nHiresTextures = False\nCacheHiresTextures = True\n[Enhancements]\nForceFiltering = False\nWidescreenHack = True\n"
+      }
+    }
+  ],
+  "rpcs3": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "Optimized settings for RPCS3 with Vulkan backend",
+      "files": {
+        "config.yml": "Video:\n  Format: Vulkan\n  FrameLimit: Auto\n  Resolution: 1920x1080\n  AntiAliasing: Disabled\n  RenderScale: 100\nAudio:\n  Format: XAudio2\n  Device: Default\nInput:\n  PadHandler: DualShock4\n  MouseHandler: Basic\nCPU:\n  PPUDecoder: LLVM\n  SPUDecoder: ASMJIT\n  ThreadScheduler: OS\n"
+      }
+    }
+  ],
+  "eden": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "Best settings for Eden Switch emulation",
+      "files": {
+        "Config.json": "{\n  \"graphics_backend\": \"Vulkan\",\n  \"resolution_scale\": 2,\n  \"docked_mode\": true,\n  \"anisotropy_filtering\": 4,\n  \"aspect_ratio\": \"16:9\",\n  \"enable_vsync\": true,\n  \"shader_cache\": true,\n  \"audio_backend\": \"OpenAL\",\n  \"controller\": \"SDL\"\n}"
+      }
+    }
+  ],
+  "pcsx2": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "Optimal PCSX2 configuration for modern hardware",
+      "files": {
+        "inis/PCSX2.ini": "[Filenames]\n[Settings]\nUserMode = 0\nEnableVSync = 1\n[EmuCore]\nGSRenderer = 13\nEnableCheats = 0\nEnableWideScreenPatches = 1\n[GS]\nRenderer = Vulkan\nUpscaleMultiplier = 3\nBilinearFilter = 1\nTrilinearFilter = 1\n[Pad]\nMultitapPort0_Enabled = false\nMultitapPort1_Enabled = false\nPad1 = SDL\n"
+      }
+    }
+  ],
+  "retroarch": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "Universal RetroArch config with optimal defaults",
+      "files": {
+        "retroarch.cfg": "video_driver = \"vulkan\"\naudio_driver = \"pulseaudio\"\nvideo_fullscreen = true\nvideo_vsync = true\nvideo_scale_integer = false\nvideo_smooth = true\naudio_sync = true\nsavestate_thumbnail_enable = true\nnotification_show_autoconfig = false\ninput_autodetect_enable = \"true\"\ninput_player1_joypad_index = \"0\"\n"
+      }
+    },
+    {
+      "name": "OmniEmu Performance",
+      "description": "Performance-focused RetroArch config",
+      "files": {
+        "retroarch.cfg": "video_driver = \"vulkan\"\naudio_driver = \"pulseaudio\"\nvideo_fullscreen = true\nvideo_threaded = true\nvideo_vsync = false\nvideo_max_swapchain_images = 2\nvideo_scale_integer = false\nvideo_smooth = false\naudio_sync = false\naudio_rate_control = false\nrewind_enable = false\nsavestate_auto_load = false\nsavestate_auto_save = false\ninput_autodetect_enable = \"true\"\ninput_player1_joypad_index = \"0\"\n"
+      }
+    }
+  ],
+  "mame": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "MAME optimized settings",
+      "files": {
+        "mame.ini": "#\n# OmniEmu Recommended MAME Config\n#\nvideo auto\nscreen auto\naspect 4:3\neffect none\nwaitvsync 1\nsyncrefresh 0\nsleep 0\nautosave 0\njoystick 1\nkeyboard 0\n"
+      }
+    }
+  ],
+  "duckstation": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "Optimal DuckStation settings for PS1 emulation",
+      "files": {
+        "settings.ini": "[General]\nUserMode = 0\nStartFullscreen = True\n[Display]\nRenderToMain = True\nFullscreen = True\nVSync = True\n[GPU]\nRenderer = Vulkan\nResolutionScale = 3\nMultisamples = 1\nPGXPEnable = True\nPGXPCulling = True\nWidescreenHack = True\n[Input]\nControllerBackend = SDL\n[ControllerPort0]\nMultitapPort1 = false\n"
+      }
+    }
+  ]
+}

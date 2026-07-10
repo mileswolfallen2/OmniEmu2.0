@@ -28,13 +28,17 @@ export function LibraryPage() {
   }, []);
 
   const scrapeMissingArt = async (list: GameEntry[]): Promise<GameEntry[]> => {
-    return Promise.all(list.map(async (g) => {
+    const updated = await Promise.all(list.map(async (g) => {
       if (!g.coverUrl) {
         const url = await window.omni.game.scrapeArt(g.title, g.platform);
         if (url) g.coverUrl = url;
       }
       return g;
     }));
+    // Persist found covers
+    const toCache = updated.filter(g => g.coverUrl).map(g => ({ romPath: g.romPath, coverUrl: g.coverUrl! }));
+    if (toCache.length > 0) window.omni.game.cacheCovers(toCache);
+    return updated;
   };
 
   const scanDirectory = useCallback(async (dir: string) => {
@@ -118,6 +122,9 @@ export function LibraryPage() {
                 className="game-card"
                 key={game.id}
                 onClick={() => handleLaunch(game)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLaunch(game); }}
+                tabIndex={0}
+                role="button"
                 title={`Launch ${game.title} via ${game.emulatorId}`}
               >
                 <div className="game-card-cover">
