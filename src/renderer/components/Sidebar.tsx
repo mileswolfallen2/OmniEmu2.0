@@ -36,7 +36,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         ))}
       </nav>
       <div className="sidebar-footer">
-        v0.1.1
+        v0.1.2
       </div>
     </div>
   );

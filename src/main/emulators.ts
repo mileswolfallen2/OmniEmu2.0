@@ -260,6 +260,7 @@ export const knownEmulators: EmulatorConfig[] = [
     platforms: [
       'nes', 'snes', 'n64', 'gb', 'gba', 'gbc',
       'ps1', 'pce', 'sega-md', 'sega-saturn', 'sega-dc',
+      'dreamcast',
     ],
     defaultPath: {
       win32: 'C:\\Program Files\\RetroArch\\retroarch.exe',
@@ -389,6 +390,45 @@ export const knownEmulators: EmulatorConfig[] = [
       linux: 'https://melonds.kuribo64.net/',
     },
   },
+  {
+    id: 'flycast',
+    name: 'Flycast',
+    description: 'Sega Dreamcast, Naomi & Atomiswave emulator',
+    platforms: ['dreamcast'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Flycast\\flycast.exe',
+      darwin: '/Applications/Flycast.app/Contents/MacOS/Flycast',
+      linux: '/usr/bin/flycast',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/flyinghead/flycast/releases/download/v2.6/flycast-win64-2.6.zip',
+          format: 'zip',
+          executablePath: 'flycast-win64.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/flyinghead/flycast/releases/download/v2.6/flycast-macOS-2.6.zip',
+          format: 'zip',
+          executablePath: 'Flycast.app/Contents/MacOS/Flycast',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/flyinghead/flycast/releases/download/v2.6/flycast-x86_64.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://github.com/flyinghead/flycast/releases',
+      darwin: 'https://github.com/flyinghead/flycast/releases',
+      linux: 'https://github.com/flyinghead/flycast/releases',
+    },
+  },
 ];
 
 export function findEmulator(id: string): EmulatorConfig | undefined {
@@ -472,6 +512,12 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'mame64.exe'),
       join(omniEmuDir, 'mame'),
       join(omniEmuDir, 'MAME.AppImage'),
+    ],
+    flycast: [
+      join(omniEmuDir, 'flycast-win64.exe'),
+      join(omniEmuDir, 'flycast'),
+      join(omniEmuDir, 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
+      join(home, 'Applications', 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
     ],
   };
   return common[emulatorId] || [join(omniEmuDir)];
@@ -636,6 +682,8 @@ function launchArgs(emulatorId: string, romPath: string): string {
     }
     case 'duckstation':
       return `"${romPath}"`;
+    case 'flycast':
+      return `"${romPath}"`;
     default:
       return `"${romPath}"`;
   }
@@ -687,7 +735,7 @@ export function scanRoms(directory: string): GameEntry[] {
     '.gba', '.gb', '.gbc', '.nds', '.iso', '.bin', '.cue',
     '.wbfs', '.wad', '.nsp', '.xci', '.pkg', '.chd',
     '.gcm', '.gcz', '.rvz', '.m3u', '.ps2', '.cso',
-    '.rom', '.zip', '.7z', '.gdi', '.pbp',
+    '.rom', '.zip', '.7z', '.gdi', '.pbp', '.cdi',
   ];
 
   const entries: GameEntry[] = [];
@@ -778,6 +826,7 @@ function guessPlatform(ext: string, dirPath?: string): string {
     '.gcm': 'gc', '.gcz': 'gc', '.rvz': 'gc',
     '.ps2': 'ps2', '.cso': 'ps2',
     '.gdi': 'dreamcast',
+    '.cdi': 'dreamcast',
     '.pbp': 'psp',
   };
   return map[ext] || 'other';
@@ -804,7 +853,6 @@ function guessEmulator(ext: string, platform?: string): string {
   if (platform) {
     const platformMap: Record<string, string> = {
       psp: 'ppsspp',
-      dreamcast: 'retroarch',
       'sega-saturn': 'retroarch',
       'sega-dc': 'retroarch',
       'sega-md': 'retroarch',
@@ -812,6 +860,7 @@ function guessEmulator(ext: string, platform?: string): string {
       nes: 'retroarch', snes: 'retroarch', n64: 'retroarch',
       gb: 'retroarch', gbc: 'retroarch', gba: 'retroarch',
       nds: 'retroarch',
+      dreamcast: 'flycast',
     };
     const mapped = platformMap[platform];
     if (mapped) return mapped;
@@ -829,7 +878,8 @@ function guessEmulator(ext: string, platform?: string): string {
     '.img': 'duckstation', '.m3u': 'duckstation',
     '.chd': 'duckstation', '.ecm': 'duckstation', '.mds': 'duckstation',
     '.ps2': 'pcsx2', '.cso': 'pcsx2',
-    '.gdi': 'retroarch',
+    '.gdi': 'flycast',
+    '.cdi': 'flycast',
     '.pbp': 'ppsspp',
   };
   return map[ext] || 'retroarch';

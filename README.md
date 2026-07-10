@@ -13,7 +13,7 @@ OmniEmu is a cross-platform emulator manager, game launcher, and ROM library for
 
 ## Features
 
-- **One-Click Emulator Setup** — Download, install, and auto-configure 9 emulators from inside the app
+- **One-Click Emulator Setup** — Download, install, and auto-configure 10 emulators from inside the app
 - **ROM Library** — Scan your ROMs, browse by platform, and launch games directly
 - **Auto-Update** — Built-in updater keeps OmniEmu current without manual downloads
 - **Game Art Scraping** — Automatically fetches covers, screenshots, and titles
@@ -34,6 +34,7 @@ OmniEmu is a cross-platform emulator manager, game launcher, and ROM library for
 | PPSSPP | PSP | ✅ | ✅ | ✅ |
 | DuckStation | PlayStation 1 | ✅ | ✅ | ✅ |
 | melonDS | Nintendo DS | ✅ | ✅ | ✅ |
+| Flycast | Dreamcast, Naomi, Atomiswave | ✅ | ✅ | ✅ |
 | RetroArch | Multi-system (NES, SNES, N64, GB/GBA, PS1, and more) | ✅ | ✅ | ✅ |
 
 ## Quick Start

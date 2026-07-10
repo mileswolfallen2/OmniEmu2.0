@@ -96,6 +96,10 @@ export interface AppSettings {
   biosDirectory: string;
   /** Per-system preferred emulator override: systemId -> emulatorId */
   systemEmulators?: Record<string, string>;
+  /** RetroAchievements username */
+  retroAchievementsUsername?: string;
+  /** RetroAchievements password/token */
+  retroAchievementsPassword?: string;
 }
 
 export interface SystemInfo {

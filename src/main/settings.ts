@@ -28,6 +28,8 @@ const defaultSettings: AppSettings = {
   presetSourceUrl: 'https://raw.githubusercontent.com/mileswolfallen2/OmniEmu2.0/main/presets.json',
   recentGames: [],
   biosDirectory: '',
+  retroAchievementsUsername: '',
+  retroAchievementsPassword: '',
 };
 
 let cached: AppSettings | null = null;

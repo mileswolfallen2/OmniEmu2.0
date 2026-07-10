@@ -16,7 +16,7 @@ import {
   ensureRomsStructure,
 } from './emulators';
 import { installEmulator, findInstalledBinary } from './installer';
-import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerConfig } from './configurator';
+import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerConfig, applyRetroAchievements } from './configurator';
 import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
 import { checkForUpdates, downloadUpdate, quitAndInstall } from './updater';
@@ -229,6 +229,17 @@ export function registerIpcHandlers(): void {
   // Paths
   ipcMain.handle('paths:roms-directory', () => getRomsDirectory());
   ipcMain.handle('paths:emulators-directory', () => getEmulatorsDirectory());
+
+  // RetroAchievements
+  ipcMain.handle(
+    'retroachievements:save',
+    async (_event, username: string, password: string) => {
+      const s = settings.get();
+      settings.save({ retroAchievementsUsername: username, retroAchievementsPassword: password });
+      const results = applyRetroAchievements(username, password);
+      return results;
+    }
+  );
 
   // Utilities
   ipcMain.handle('utilities:regenerate-roms-structure', () => {

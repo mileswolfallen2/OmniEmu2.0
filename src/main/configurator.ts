@@ -218,6 +218,27 @@ MultitapPort1 = false
       },
     },
   ],
+  flycast: [
+    {
+      name: 'OmniEmu Recommended',
+      description: 'Optimal Flycast settings for Dreamcast emulation',
+      files: {
+        'emu.cfg': `[config]
+renderer = vulkan
+fullscreen = yes
+vsync = yes
+auto_region = yes
+cable_type = vga
+broadcast = ntsc
+frameskip = 0
+[network]
+enable = no
+[input]
+enable_mouse = no
+`,
+      },
+    },
+  ],
 };
 
 // ---- Remote presets URL ----
@@ -229,7 +250,7 @@ async function fetchRemotePresets(): Promise<Record<string, ConfigPreset[]> | nu
     const { get } = await import('https');
     const data = await new Promise<string>((resolve, reject) => {
       get(presetSourceUrl, {
-        headers: { 'User-Agent': 'OmniEmu/0.1.1' },
+        headers: { 'User-Agent': 'OmniEmu/0.1.2' },
         timeout: 10000,
       }, (res) => {
         if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
@@ -318,6 +339,11 @@ function getConfigDir(emulatorId: string, installPath: string): string {
       win32: join(process.env.APPDATA || '', 'Eden'),
       darwin: join(require('os').homedir(), 'Library', 'Application Support', 'Eden'),
       linux: join(require('os').homedir(), '.config', 'Eden'),
+    },
+    flycast: {
+      win32: join(process.env.APPDATA || '', 'flycast'),
+      darwin: join(require('os').homedir(), 'Library', 'Application Support', 'flycast'),
+      linux: join(require('os').homedir(), '.config', 'flycast'),
     },
   };
   return platformDirs[emulatorId]?.[platform] || dirname(installPath);
@@ -510,6 +536,133 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
       writeFileSync(iniPath, lines.join('\n'), 'utf-8');
       return true;
     }
+
+    case 'flycast': {
+      const cfgPath = join(configDir, 'emu.cfg');
+      const existing = existsSync(cfgPath) ? readFileSync(cfgPath, 'utf-8') : '';
+      const lines = existing.split('\n').filter(l =>
+        !l.startsWith('enable_mouse')
+      );
+      lines.push('[input]');
+      lines.push('enable_mouse = no');
+      writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
   }
   return false;
+}
+
+const raEmulatorConfigs: Record<string, {
+  file: string;
+  enabled: string;
+  username: string;
+  password: string;
+  section?: string;
+}> = {
+  retroarch: {
+    file: 'retroarch.cfg',
+    enabled: 'cheevos_enable = "true"',
+    username: 'cheevos_username = "%s"',
+    password: 'cheevos_password = "%s"',
+  },
+  dolphin: {
+    file: 'Config/Dolphin.ini',
+    section: 'General',
+    enabled: 'RAEnabled = True',
+    username: 'RAUsername = %s',
+    password: 'RAPassword = %s',
+  },
+  pcsx2: {
+    file: 'inis/PCSX2.ini',
+    section: 'EmuCore',
+    enabled: 'AchievementsEnabled = 1',
+    username: 'AchievementsUsername = %s',
+    password: 'AchievementsPassword = %s',
+  },
+  duckstation: {
+    file: 'settings.ini',
+    section: 'Cheevos',
+    enabled: 'Enabled = True',
+    username: 'Username = %s',
+    password: 'Password = %s',
+  },
+  flycast: {
+    file: 'emu.cfg',
+    section: 'achievements',
+    enabled: 'enable = yes',
+    username: 'username = %s',
+    password: 'password = %s',
+  },
+};
+
+export function applyRetroAchievements(username: string, password: string): Record<string, boolean> {
+  const results: Record<string, boolean> = {};
+
+  for (const [emuId, cfg] of Object.entries(raEmulatorConfigs)) {
+    try {
+      const configDir = getConfigDir(emuId, '');
+      if (!configDir || configDir === '.') { results[emuId] = false; continue; }
+
+      const filePath = join(configDir, cfg.file);
+      const parentDir = dirname(filePath);
+      if (!existsSync(parentDir)) mkdirSync(parentDir, { recursive: true });
+
+      let content = '';
+      if (existsSync(filePath)) content = readFileSync(filePath, 'utf-8');
+
+      const lines = content.split('\n');
+
+      if (cfg.section) {
+        const sectionStart = lines.findIndex(l => l.trim() === `[${cfg.section}]`);
+        if (sectionStart === -1) {
+          lines.push('', `[${cfg.section}]`);
+          lines.push(cfg.enabled);
+          lines.push(cfg.username.replace('%s', username));
+          lines.push(cfg.password.replace('%s', password));
+        } else {
+          const existingEnabled = lines.slice(sectionStart).findIndex(l => /^enable|^raenabled|^achievementsenabled|^enabled\b/i.test(l.trim()));
+          if (existingEnabled === -1 || existingEnabled > lines.slice(sectionStart).findIndex(l => l.trim().startsWith('[') && !l.trim().startsWith(`[${cfg.section}]`))) {
+            lines.splice(sectionStart + 1, 0, cfg.enabled);
+          }
+          const existingUser = lines.slice(sectionStart).findIndex(l => /username/i.test(l));
+          if (existingUser === -1 || existingUser > lines.slice(sectionStart).findIndex(l => l.trim().startsWith('[') && !l.trim().startsWith(`[${cfg.section}]`))) {
+            lines.splice(sectionStart + 1, 0, cfg.username.replace('%s', username));
+          }
+          const existingPass = lines.slice(sectionStart).findIndex(l => /password/i.test(l));
+          if (existingPass === -1 || existingPass > lines.slice(sectionStart).findIndex(l => l.trim().startsWith('[') && !l.trim().startsWith(`[${cfg.section}]`))) {
+            lines.splice(sectionStart + 1, 0, cfg.password.replace('%s', password));
+          }
+          // Update existing lines
+          for (let i = sectionStart + 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith('[')) break;
+            if (/^enable|^raenabled|^achievementsenabled|^enabled\b/i.test(line)) {
+              lines[i] = cfg.enabled;
+            } else if (/^\s*username/i.test(line)) {
+              lines[i] = cfg.username.replace('%s', username);
+            } else if (/^\s*password/i.test(line)) {
+              lines[i] = cfg.password.replace('%s', password);
+            }
+          }
+        }
+      } else {
+        // RetroArch-style flat config
+        const setLine = (prefix: string, value: string) => {
+          const idx = lines.findIndex(l => l.trim().startsWith(prefix));
+          if (idx !== -1) lines[idx] = value;
+          else lines.push(value);
+        };
+        setLine('cheevos_enable', cfg.enabled);
+        setLine('cheevos_username', cfg.username.replace('%s', username));
+        setLine('cheevos_password', cfg.password.replace('%s', password));
+      }
+
+      writeFileSync(filePath, lines.join('\n'), 'utf-8');
+      results[emuId] = true;
+    } catch {
+      results[emuId] = false;
+    }
+  }
+
+  return results;
 }

@@ -120,7 +120,7 @@ export async function findValidThumbnail(title: string, platform: string): Promi
 
 function fetchText(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const req = httpsGet(url, { headers: { 'User-Agent': 'OmniEmu/0.1.1' }, timeout: 10000 }, (res) => {
+    const req = httpsGet(url, { headers: { 'User-Agent': 'OmniEmu/0.1.2' }, timeout: 10000 }, (res) => {
       let data = '';
       res.on('data', (chunk: string) => data += chunk);
       res.on('end', () => resolve(data));
@@ -134,7 +134,7 @@ function urlExists(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     const req = httpsGet(url, {
       method: 'GET',
-      headers: { 'User-Agent': 'OmniEmu/0.1.1' },
+      headers: { 'User-Agent': 'OmniEmu/0.1.2' },
       timeout: 10000,
     }, (res) => {
       // GitHub raw returns 200 for existing or redirects to it

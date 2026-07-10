@@ -109,6 +109,11 @@ const api = {
       ipcRenderer.invoke('utilities:regenerate-roms-structure'),
   },
 
+  retroachievements: {
+    save: (username: string, password: string): Promise<Record<string, boolean>> =>
+      ipcRenderer.invoke('retroachievements:save', username, password),
+  },
+
   updates: {
     check: (): Promise<boolean> => ipcRenderer.invoke('updates:check'),
     download: (): Promise<boolean> => ipcRenderer.invoke('updates:download'),
