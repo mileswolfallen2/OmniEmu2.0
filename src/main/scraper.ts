@@ -94,7 +94,7 @@ function urlExists(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     const req = httpsGet(url, {
       method: 'GET',
-      headers: { 'User-Agent': 'OmniEmu/0.1.0' },
+      headers: { 'User-Agent': 'OmniEmu/0.1.1' },
       timeout: 10000,
     }, (res) => {
       // GitHub raw returns 200 for existing or redirects to it

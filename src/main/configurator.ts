@@ -221,7 +221,7 @@ async function fetchRemotePresets(): Promise<Record<string, ConfigPreset[]> | nu
     const { get } = await import('https');
     const data = await new Promise<string>((resolve, reject) => {
       get(presetSourceUrl, {
-        headers: { 'User-Agent': 'OmniEmu/0.1.0' },
+        headers: { 'User-Agent': 'OmniEmu/0.1.1' },
         timeout: 10000,
       }, (res) => {
         if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
