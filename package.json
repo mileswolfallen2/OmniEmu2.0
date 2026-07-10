@@ -14,15 +14,16 @@
     "preview": "npm run build && npm run start",
     "prepare": "python3 scripts/generate-icons.py",
     "postinstall": "node node_modules/electron/install.js",
-    "package:mac": "npm run build && electron-builder --mac --universal",
-    "package:mac:x64": "npm run build && electron-builder --mac --x64",
-    "package:mac:arm64": "npm run build && electron-builder --mac --arm64",
-    "package:win": "npm run build && electron-builder --win",
-    "package:linux": "npm run build && electron-builder --linux",
-    "package:all": "npm run build && electron-builder --mac --universal --win --linux",
+    "package:mac": "npm run build && npx electron-builder --mac --universal",
+    "package:mac:x64": "npm run build && npx electron-builder --mac --x64",
+    "package:mac:arm64": "npm run build && npx electron-builder --mac --arm64",
+    "package:win": "npm run build && npx electron-builder --win",
+    "package:linux": "npm run build && npx electron-builder --linux",
+    "package:all": "npm run build && npx electron-builder --mac --universal --win --linux",
+    "build:all": "npm run build && npx electron-builder --mac --universal && npx electron-builder --win --arm64 --linux --arm64 && npx electron-builder --win --x64 --linux --x64",
     "typecheck": "tsc --noEmit -p tsconfig.main.json && tsc --noEmit -p tsconfig.renderer.json"
   },
-  "author": "",
+  "author": "fedl team <help@fedl.site>",
   "license": "MIT",
   "devDependencies": {
     "@types/react": "^19.0.0",
@@ -87,8 +88,7 @@
     "linux": {
       "icon": "assets/icon.png",
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
       "category": "Game",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"

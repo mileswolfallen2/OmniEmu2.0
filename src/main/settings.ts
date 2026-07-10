@@ -16,7 +16,7 @@ const defaultSettings: AppSettings = {
   minimiseToTray: true,
   launchInFullscreen: false,
   closeToTray: true,
-  presetSourceUrl: 'https://raw.githubusercontent.com/mileswolfallen2/omniemu-presets/main/presets.json',
+  presetSourceUrl: 'https://raw.githubusercontent.com/mileswolfallen2/OmniEmu2.0/main/presets.json',
   recentGames: [],
   biosDirectory: '',
 };

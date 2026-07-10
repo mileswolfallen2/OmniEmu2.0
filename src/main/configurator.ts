@@ -214,7 +214,7 @@ MultitapPort1 = false
 
 // ---- Remote presets URL ----
 
-const presetSourceUrl = 'https://raw.githubusercontent.com/mileswolfallen2/omniemu-presets/main/presets.json';
+const presetSourceUrl = 'https://raw.githubusercontent.com/mileswolfallen2/OmniEmu2.0/main/presets.json';
 
 async function fetchRemotePresets(): Promise<Record<string, ConfigPreset[]> | null> {
   try {
