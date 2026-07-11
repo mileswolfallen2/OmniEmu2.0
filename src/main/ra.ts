@@ -94,7 +94,8 @@ function writeGameListCache(cache: GameListCache): void {
 async function fetchGameList(consoleId: number, apiKey: string, username: string): Promise<RaGameListEntry[]> {
   const url = `https://retroachievements.org/API/API_GetGameList.php?z=${encodeURIComponent(username)}&y=${encodeURIComponent(apiKey)}&c=${consoleId}`;
   const json = await fetchText(url);
-  const data = JSON.parse(json);
+  let data: any;
+  try { data = JSON.parse(json); } catch { return []; }
   if (!Array.isArray(data)) return [];
   return data.map((g: any) => ({ id: g.ID, title: g.Title }));
 }
@@ -138,9 +139,10 @@ async function lookupGameIdByHash(romPath: string): Promise<number | null> {
     const body = `r=gameid&m=${hash}`;
     const response = await postForm('https://retroachievements.org/dorequest.php', body);
     const parsed = JSON.parse(response);
-    if (parsed.Success && parsed.ID) return parsed.ID;
+    if (parsed.Success && (parsed.ID || parsed.GameID)) return parsed.ID || parsed.GameID;
     return null;
-  } catch {
+  } catch (err) {
+    console.error('[ra] hash lookup error:', err);
     return null;
   }
 }
@@ -168,7 +170,7 @@ async function fetchAchievements(
   try {
     const url = `https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php`
       + `?z=${encodeURIComponent(username)}&y=${encodeURIComponent(apiKey)}`
-      + `&i=${gameId}&u=${encodeURIComponent(username)}`;
+      + `&g=${gameId}&u=${encodeURIComponent(username)}`;
     const json = await fetchText(url);
     const data = JSON.parse(json);
     if (!data || !data.Achievements) return null;
@@ -192,7 +194,8 @@ async function fetchAchievements(
       userProgress: achievements.filter(a => a.dateEarned).length,
       achievements,
     };
-  } catch {
+  } catch (err) {
+    console.error('[ra] fetchAchievements error:', err);
     return null;
   }
 }

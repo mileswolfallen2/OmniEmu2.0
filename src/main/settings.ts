@@ -30,6 +30,7 @@ const defaultSettings: AppSettings = {
   biosDirectory: '',
   retroAchievementsUsername: '',
   retroAchievementsPassword: '',
+  retroAchievementsApiKey: '',
 };
 
 let cached: AppSettings | null = null;

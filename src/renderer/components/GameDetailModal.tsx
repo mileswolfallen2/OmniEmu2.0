@@ -97,82 +97,83 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
           </div>
 
           <div className="game-detail-right">
-            {loadingMeta ? (
-              <div className="text-sm text-muted" style={{ padding: 12 }}>Loading metadata...</div>
-            ) : (
-              <>
-                <div className="game-detail-meta">
-                  {metadata?.year && (
-                    <div className="meta-row">
-                      <span className="meta-label">Year</span>
-                      <span>{metadata.year}</span>
-                    </div>
-                  )}
-                  {metadata?.genre && (
-                    <div className="meta-row">
-                      <span className="meta-label">Genre</span>
-                      <span>{metadata.genre}</span>
-                    </div>
-                  )}
-                  {metadata?.publisher && (
-                    <div className="meta-row">
-                      <span className="meta-label">Publisher</span>
-                      <span>{metadata.publisher}</span>
-                    </div>
-                  )}
-                  {metadata?.rating !== undefined && metadata.rating > 0 && (
-                    <div className="meta-row">
-                      <span className="meta-label">Rating</span>
-                      <span>{'★'.repeat(Math.round(metadata.rating))}{'☆'.repeat(5 - Math.round(metadata.rating))}</span>
-                    </div>
-                  )}
-                  <div className="meta-row">
-                    <span className="meta-label">Emulator</span>
-                    <span>{game.emulatorId}</span>
-                  </div>
-                  <div className="meta-row">
-                    <span className="meta-label">Played</span>
-                    <span>{game.playCount} time{game.playCount !== 1 ? 's' : ''}</span>
-                  </div>
-                </div>
-
-                {metadata?.description && (
-                  <div className="game-detail-description">
-                    <h4>About</h4>
-                    <p>{metadata.description}</p>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="game-detail-achievements">
-              <h4>
-                Achievements
-                {achievements && (
-                  <span className="text-sm text-muted" style={{ fontWeight: 400, marginLeft: 8 }}>
-                    {achievements.userProgress}/{achievements.totalAchievements} · {achievements.totalPoints} pts
-                  </span>
-                )}
-              </h4>
-
-              {loadingAchievements ? (
-                <p className="text-sm text-muted">Loading achievements...</p>
-              ) : achievements ? (
-                <div className="achievement-list">
-                  {achievements.achievements.map((a) => (
-                    <AchievementRow key={a.id} achievement={a} />
-                  ))}
-                </div>
+            <div className="game-detail-right-scroll">
+              {loadingMeta ? (
+                <div className="text-sm text-muted" style={{ padding: 12 }}>Loading metadata...</div>
               ) : (
-                <p className="text-sm text-muted">
-                  Add your RetroAchievements Web API Key in Settings &gt; Utilities to see achievements here.
-                </p>
+                <>
+                  <div className="game-detail-meta">
+                    {metadata?.year && (
+                      <div className="meta-row">
+                        <span className="meta-label">Year</span>
+                        <span>{metadata.year}</span>
+                      </div>
+                    )}
+                    {metadata?.genre && (
+                      <div className="meta-row">
+                        <span className="meta-label">Genre</span>
+                        <span>{metadata.genre}</span>
+                      </div>
+                    )}
+                    {metadata?.publisher && (
+                      <div className="meta-row">
+                        <span className="meta-label">Publisher</span>
+                        <span>{metadata.publisher}</span>
+                      </div>
+                    )}
+                    {metadata?.rating !== undefined && metadata.rating > 0 && (
+                      <div className="meta-row">
+                        <span className="meta-label">Rating</span>
+                        <span>{'★'.repeat(Math.round(metadata.rating))}{'☆'.repeat(5 - Math.round(metadata.rating))}</span>
+                      </div>
+                    )}
+                    <div className="meta-row">
+                      <span className="meta-label">Emulator</span>
+                      <span>{game.emulatorId}</span>
+                    </div>
+                    <div className="meta-row">
+                      <span className="meta-label">Played</span>
+                      <span>{game.playCount} time{game.playCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+
+                  {metadata?.description && (
+                    <div className="game-detail-description">
+                      <h4>About</h4>
+                      <p>{metadata.description}</p>
+                    </div>
+                  )}
+                </>
               )}
+
+              <div className="game-detail-achievements">
+                <h4>
+                  Achievements
+                  {achievements && (
+                    <span className="text-sm text-muted" style={{ fontWeight: 400, marginLeft: 8 }}>
+                      {achievements.userProgress}/{achievements.totalAchievements} · {achievements.totalPoints} pts
+                    </span>
+                  )}
+                </h4>
+
+                {loadingAchievements ? (
+                  <p className="text-sm text-muted">Loading achievements...</p>
+                ) : achievements ? (
+                  <div className="achievement-list">
+                    {achievements.achievements.map((a) => (
+                      <AchievementRow key={a.id} achievement={a} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">
+                    Add your RetroAchievements Web API Key in Settings &gt; Utilities to see achievements here.
+                  </p>
+                )}
+              </div>
             </div>
 
             <button
-              className="btn btn-primary"
-              style={{ marginTop: 'auto', width: '100%' }}
+              className="btn btn-primary game-detail-launch"
               onClick={() => { onLaunch(game); onClose(); }}
             >
               Launch Game
