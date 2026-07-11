@@ -2,6 +2,8 @@ import type {
   EmulatorConfig,
   EmulatorState,
   GameEntry,
+  GameMetadata,
+  AchievementInfo,
   SystemInfo,
   AppSettings,
   InstallProgress,
@@ -32,6 +34,10 @@ declare global {
       };
       game: {
         launch: (emulatorId: string, romPath: string) => Promise<boolean>;
+        scrapeArt: (title: string, platform: string) => Promise<string | undefined>;
+        cacheCovers: (entries: { romPath: string; coverUrl: string }[]) => Promise<boolean>;
+        scrapeMetadata: (romPath: string, title: string, platform: string) => Promise<GameMetadata>;
+        achievements: (romPath: string, title: string, platform: string) => Promise<AchievementInfo | null>;
       };
       settings: {
         get: () => Promise<AppSettings>;

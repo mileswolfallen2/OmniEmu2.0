@@ -1,5 +1,6 @@
 import { autoUpdater } from 'electron-updater';
 import { BrowserWindow } from 'electron';
+import { platform } from 'os';
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
@@ -26,7 +27,17 @@ export function setupAutoUpdater() {
   });
 
   autoUpdater.on('error', (err) => {
-    sendToWindows('updates:status', { status: 'error', message: err.message });
+    const isSigningError = platform() === 'darwin' &&
+      /code signature|not signed|code object/i.test(err.message);
+    sendToWindows('updates:status', {
+      status: 'error',
+      message: isSigningError
+        ? 'macOS requires a one-time manual download for this update. After that, future updates will install automatically.'
+        : err.message,
+      manualLink: isSigningError
+        ? 'https://github.com/mileswolfallen2/OmniEmu2.0/releases/latest'
+        : undefined,
+    });
   });
 
   autoUpdater.on('download-progress', (progress) => {

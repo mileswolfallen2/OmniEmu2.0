@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { AppSettings, EmulatorConfig } from '../../shared/types';
 import { BiosCheckPanel } from '../components/BiosCheckPanel';
+import { ReleaseNotesModal } from '../components/ReleaseNotesModal';
 import { applyTheme } from '../App';
 
 const systemLabels: Record<string, string> = {
@@ -26,10 +27,12 @@ export function SettingsPage() {
     version?: string;
     releaseNotes?: string;
     message?: string;
+    manualLink?: string;
   } | null>(null);
   const [checking, setChecking] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [showReleaseNotes, setShowReleaseNotes] = useState(false);
 
   useEffect(() => {
     const unsubStatus = window.omni.updates.onStatus((s) => {
@@ -48,7 +51,11 @@ export function SettingsPage() {
       } else if (s.status === 'error') {
         setChecking(false);
         setDownloading(false);
-        setUpdateInfo({ status: 'error', message: s.message as string });
+        setUpdateInfo({
+          status: 'error',
+          message: s.message as string,
+          manualLink: s.manualLink as string | undefined,
+        });
       }
     });
     const unsubProgress = window.omni.updates.onDownloadProgress((p) => {
@@ -298,11 +305,25 @@ export function SettingsPage() {
               {updateInfo?.status === 'available' && `v${updateInfo.version} available`}
               {updateInfo?.status === 'not-available' && `v${updateInfo.version} — up to date`}
               {updateInfo?.status === 'downloaded' && 'Ready to install — restart the app to apply'}
-              {updateInfo?.status === 'error' && `Error: ${updateInfo.message}`}
+              {updateInfo?.status === 'error' && updateInfo.manualLink && (
+                <span>
+                  {updateInfo.message}
+                </span>
+              )}
+              {updateInfo?.status === 'error' && !updateInfo.manualLink && (
+                `Error: ${updateInfo.message}`
+              )}
               {!updateInfo && 'Check GitHub for new releases'}
             </div>
           </div>
-          {updateInfo?.status !== 'downloaded' ? (
+          {updateInfo?.status === 'error' && updateInfo.manualLink ? (
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => window.open(updateInfo.manualLink!, '_blank')}
+            >
+              Manual Download
+            </button>
+          ) : updateInfo?.status !== 'downloaded' ? (
             <button
               className="btn btn-secondary btn-sm"
               disabled={checking || downloading}
@@ -343,20 +364,26 @@ export function SettingsPage() {
           </div>
         )}
         {updateInfo?.releaseNotes && (
-          <details style={{ marginTop: 8 }}>
-            <summary className="text-sm text-muted" style={{ cursor: 'pointer' }}>
-              Release notes
-            </summary>
-            <pre style={{
-              marginTop: 8, padding: 8, fontSize: 12,
-              background: 'var(--surface)', borderRadius: 6,
-              maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap',
-            }}>
-              {typeof updateInfo.releaseNotes === 'string'
+          <div style={{ marginTop: 8 }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowReleaseNotes(true)}
+            >
+              View Release Notes
+            </button>
+          </div>
+        )}
+
+        {showReleaseNotes && updateInfo?.releaseNotes && (
+          <ReleaseNotesModal
+            version={updateInfo.version || ''}
+            releaseNotes={
+              typeof updateInfo.releaseNotes === 'string'
                 ? updateInfo.releaseNotes
-                : JSON.stringify(updateInfo.releaseNotes, null, 2)}
-            </pre>
-          </details>
+                : JSON.stringify(updateInfo.releaseNotes, null, 2)
+            }
+            onClose={() => setShowReleaseNotes(false)}
+          />
         )}
       </div>
 

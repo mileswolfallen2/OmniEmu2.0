@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import type { GameEntry } from '../../shared/types';
+import { GameDetailModal } from '../components/GameDetailModal';
 
 const platformIcons: Record<string, string> = {
   nes: '🕹️', snes: '🕹️', n64: '🎮',
@@ -13,6 +14,7 @@ export function LibraryPage() {
   const [games, setGames] = useState<GameEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [romsDir, setRomsDir] = useState<string>('');
+  const [selectedGame, setSelectedGame] = useState<GameEntry | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -58,6 +60,10 @@ export function LibraryPage() {
 
   const handleLaunch = async (game: GameEntry) => {
     await window.omni.game.launch(game.emulatorId, game.romPath);
+  };
+
+  const handleShowDetail = (game: GameEntry) => {
+    setSelectedGame(game);
   };
 
   return (
@@ -121,11 +127,11 @@ export function LibraryPage() {
               <div
                 className="game-card"
                 key={game.id}
-                onClick={() => handleLaunch(game)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLaunch(game); }}
+                onClick={() => handleShowDetail(game)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleShowDetail(game); }}
                 tabIndex={0}
                 role="button"
-                title={`Launch ${game.title} via ${game.emulatorId}`}
+                title={`View ${game.title}`}
               >
                 <div className="game-card-cover">
                   {game.coverUrl ? (
@@ -149,6 +155,13 @@ export function LibraryPage() {
             ))}
           </div>
         </div>
+      )}
+      {selectedGame && (
+        <GameDetailModal
+          game={selectedGame}
+          onClose={() => setSelectedGame(null)}
+          onLaunch={handleLaunch}
+        />
       )}
     </div>
   );

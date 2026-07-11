@@ -4,6 +4,7 @@ export function UtilitiesPage() {
   const [regenerating, setRegenerating] = useState(false);
   const [raUsername, setRaUsername] = useState('');
   const [raPassword, setRaPassword] = useState('');
+  const [raApiKey, setRaApiKey] = useState('');
   const [raResults, setRaResults] = useState<Record<string, boolean> | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -11,6 +12,7 @@ export function UtilitiesPage() {
     window.omni.settings.get().then((s) => {
       setRaUsername(s.retroAchievementsUsername || '');
       setRaPassword(s.retroAchievementsPassword || '');
+      setRaApiKey(s.retroAchievementsApiKey || '');
     });
   }, []);
 
@@ -24,6 +26,11 @@ export function UtilitiesPage() {
     setSaving(true);
     setRaResults(null);
     try {
+      await window.omni.settings.save({
+        retroAchievementsUsername: raUsername,
+        retroAchievementsPassword: raPassword,
+        retroAchievementsApiKey: raApiKey,
+      });
       const results = await window.omni.retroachievements.save(raUsername, raPassword);
       setRaResults(results);
     } catch {
@@ -34,10 +41,10 @@ export function UtilitiesPage() {
 
   const emuLabels: Record<string, string> = {
     retroarch: 'RetroArch',
-    dolphin: 'Dolphin',
     pcsx2: 'PCSX2',
     duckstation: 'DuckStation',
     flycast: 'Flycast',
+    melonds: 'melonDS',
   };
 
   return (
@@ -66,17 +73,10 @@ export function UtilitiesPage() {
       <div className="settings-section">
         <h3>RetroAchievements</h3>
         <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
-          Enable RetroAchievements across all supported emulators. Get your
-          password from{' '}
-          <a
-            href="https://retroachievements.org/settings"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--accent)', textDecoration: 'underline' }}
-          >
-            retroachievements.org/settings
-          </a>
-          {' '}(under "Web API Key").
+          Enable RetroAchievements across all supported emulators and view
+          per-game achievements in the game detail modal. The username and
+          password are used to configure emulators; the Web API Key (from
+          retroachievements.org/settings) is used to fetch achievement data.
         </p>
 
         <div className="setting-row">
@@ -95,14 +95,31 @@ export function UtilitiesPage() {
 
         <div className="setting-row">
           <div>
-            <div className="setting-label">Password / API Key</div>
+            <div className="setting-label">Password</div>
           </div>
           <input
             type="password"
             className="input"
             value={raPassword}
             onChange={(e) => setRaPassword(e.target.value)}
-            placeholder="your password or Web API Key"
+            placeholder="your RetroAchievements password"
+            style={{ width: 240 }}
+          />
+        </div>
+
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Web API Key</div>
+            <div className="setting-desc">
+              From retroachievements.org/settings
+            </div>
+          </div>
+          <input
+            type="password"
+            className="input"
+            value={raApiKey}
+            onChange={(e) => setRaApiKey(e.target.value)}
+            placeholder="your Web API Key"
             style={{ width: 240 }}
           />
         </div>

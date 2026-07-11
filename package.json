@@ -44,6 +44,7 @@
   "build": {
     "appId": "com.omniemu.app",
     "productName": "OmniEmu",
+    "afterPack": "./scripts/adhoc-sign.cjs",
     "publish": ["github"],
     "directories": {
       "output": "release",

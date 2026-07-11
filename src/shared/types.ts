@@ -64,6 +64,15 @@ export interface RomFile {
   playCount: number;
 }
 
+export interface GameMetadata {
+  description?: string;
+  year?: number;
+  genre?: string;
+  publisher?: string;
+  screenshots?: string[];
+  rating?: number;
+}
+
 export interface GameEntry {
   id: string;
   romPath: string;
@@ -71,6 +80,12 @@ export interface GameEntry {
   platform: string;
   emulatorId: string;
   coverUrl?: string;
+  description?: string;
+  year?: number;
+  genre?: string;
+  publisher?: string;
+  screenshots?: string[];
+  rating?: number;
   lastPlayed?: string;
   playCount: number;
   addedAt: string;
@@ -100,6 +115,28 @@ export interface AppSettings {
   retroAchievementsUsername?: string;
   /** RetroAchievements password/token */
   retroAchievementsPassword?: string;
+  /** RetroAchievements Web API Key (from retroachievements.org/settings) */
+  retroAchievementsApiKey?: string;
+}
+
+export interface RetroAchievement {
+  id: number;
+  title: string;
+  description: string;
+  points: number;
+  badgeName: string;
+  dateEarned?: string;
+  dateEarnedHardcore?: string;
+}
+
+export interface AchievementInfo {
+  gameId: number;
+  gameTitle: string;
+  consoleName: string;
+  totalAchievements: number;
+  totalPoints: number;
+  userProgress: number;
+  achievements: RetroAchievement[];
 }
 
 export interface SystemInfo {

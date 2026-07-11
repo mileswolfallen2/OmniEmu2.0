@@ -10,7 +10,7 @@ interface SidebarProps {
 const navItems: { page: Page; label: string; icon: string }[] = [
   { page: 'dashboard', label: 'Dashboard', icon: '📊' },
   { page: 'emulators', label: 'Emulators', icon: '🕹️' },
-  { page: 'library', label: 'Game Library', icon: '📚' },
+  { page: 'library', label: 'Library', icon: '📚' },
   { page: 'controller', label: 'Controller', icon: '🎮' },
   { page: 'utilities', label: 'Utilities', icon: '🔧' },
   { page: 'settings', label: 'Settings', icon: '⚙️' },

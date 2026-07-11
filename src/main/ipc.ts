@@ -20,8 +20,9 @@ import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerCon
 import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
 import { checkForUpdates, downloadUpdate, quitAndInstall } from './updater';
-import { InstallProgress, AppSettings, GameEntry } from '../shared/types';
-import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers } from './scraper';
+import { InstallProgress, AppSettings, GameEntry, AchievementInfo } from '../shared/types';
+import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers, scrapeGameMetadata } from './scraper';
+import { getGameAchievements } from './ra';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
 
 export function registerIpcHandlers(): void {
@@ -186,6 +187,18 @@ export function registerIpcHandlers(): void {
     return true;
   });
 
+  // Scrape game metadata (description, year, genre, publisher, screenshots)
+  ipcMain.handle('games:scrape-metadata', async (_event, romPath: string, title: string, platform: string) => {
+    return scrapeGameMetadata(romPath, buildScrapeTitle(title), platform);
+  });
+
+  // Fetch RetroAchievements for a game
+  ipcMain.handle('games:achievements', async (_event, romPath: string, title: string, platform: string) => {
+    const s = settings.get();
+    if (!s.retroAchievementsApiKey || !s.retroAchievementsUsername) return null;
+    return getGameAchievements(romPath, title, platform, s.retroAchievementsApiKey, s.retroAchievementsUsername);
+  });
+
   // Settings
   ipcMain.handle('settings:get', () => settings.get());
   ipcMain.handle('settings:save', (_event, s: Partial<AppSettings>) =>
@@ -236,7 +249,7 @@ export function registerIpcHandlers(): void {
     async (_event, username: string, password: string) => {
       const s = settings.get();
       settings.save({ retroAchievementsUsername: username, retroAchievementsPassword: password });
-      const results = applyRetroAchievements(username, password);
+      const results = await applyRetroAchievements(username, password);
       return results;
     }
   );

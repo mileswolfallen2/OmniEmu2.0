@@ -239,6 +239,23 @@ enable_mouse = no
       },
     },
   ],
+  melonds: [
+    {
+      name: 'OmniEmu Recommended',
+      description: 'Optimized melonDS settings',
+      files: {
+        'melonDS.ini': `[General]
+fullscreen = 1
+[Video]
+renderer = OpenGL
+vsync = 1
+[Audio]
+volume = 100
+[Controls]
+`,
+      },
+    },
+  ],
 };
 
 // ---- Remote presets URL ----
@@ -344,6 +361,11 @@ function getConfigDir(emulatorId: string, installPath: string): string {
       win32: join(process.env.APPDATA || '', 'flycast'),
       darwin: join(require('os').homedir(), 'Library', 'Application Support', 'flycast'),
       linux: join(require('os').homedir(), '.config', 'flycast'),
+    },
+    melonds: {
+      win32: join(process.env.APPDATA || '', 'melonDS'),
+      darwin: join(require('os').homedir(), 'Library', 'Application Support', 'melonDS'),
+      linux: join(require('os').homedir(), '.config', 'melonDS'),
     },
   };
   return platformDirs[emulatorId]?.[platform] || dirname(installPath);
@@ -548,55 +570,111 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
       writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
       return true;
     }
+
+    case 'melonds': {
+      const iniPath = join(configDir, 'melonDS.ini');
+      const existing = existsSync(iniPath) ? readFileSync(iniPath, 'utf-8') : '';
+      const lines = existing.split('\n').filter(l =>
+        !l.startsWith('fullscreen') && !l.startsWith('JoystickID')
+      );
+      lines.push('fullscreen = 1');
+      lines.push('JoystickID = 0');
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      return true;
+    }
   }
   return false;
+}
+
+async function getRetroAchievementsToken(username: string, password: string): Promise<string | null> {
+  try {
+    const https = await import('https');
+    const { URLSearchParams } = await import('url');
+    const params = new URLSearchParams();
+    params.append('u', username);
+    params.append('p', password);
+    params.append('r', 'login');
+
+    const data = await new Promise<string>((resolve, reject) => {
+      const body = params.toString();
+      const req = https.request('https://retroachievements.org/dorequest.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 15000,
+      }, (res: import('http').IncomingMessage) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => resolve(Buffer.concat(chunks).toString()));
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+
+    const parsed = JSON.parse(data);
+    if (parsed.Success && parsed.Token) return parsed.Token;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 const raEmulatorConfigs: Record<string, {
   file: string;
   enabled: string;
   username: string;
-  password: string;
+  token: string;
   section?: string;
+  extra?: string[];
 }> = {
   retroarch: {
     file: 'retroarch.cfg',
     enabled: 'cheevos_enable = "true"',
     username: 'cheevos_username = "%s"',
-    password: 'cheevos_password = "%s"',
-  },
-  dolphin: {
-    file: 'Config/Dolphin.ini',
-    section: 'General',
-    enabled: 'RAEnabled = True',
-    username: 'RAUsername = %s',
-    password: 'RAPassword = %s',
+    token: 'cheevos_token = "%s"',
   },
   pcsx2: {
     file: 'inis/PCSX2.ini',
-    section: 'EmuCore',
-    enabled: 'AchievementsEnabled = 1',
-    username: 'AchievementsUsername = %s',
-    password: 'AchievementsPassword = %s',
+    section: 'Achievements',
+    enabled: 'Enabled = True',
+    username: 'Username = %s',
+    token: 'Token = %s',
+    extra: ['LoginTimestamp = %d'],
   },
   duckstation: {
     file: 'settings.ini',
     section: 'Cheevos',
     enabled: 'Enabled = True',
     username: 'Username = %s',
-    password: 'Password = %s',
+    token: 'Token = %s',
+    extra: ['LoginTimestamp = %d'],
   },
   flycast: {
     file: 'emu.cfg',
     section: 'achievements',
     enabled: 'enable = yes',
     username: 'username = %s',
-    password: 'password = %s',
+    token: 'password = %s',
+  },
+  melonds: {
+    file: 'melonDS.ini',
+    section: 'Achievements',
+    enabled: 'Enabled = 1',
+    username: 'Username = %s',
+    token: 'Password = %s',
   },
 };
 
-export function applyRetroAchievements(username: string, password: string): Record<string, boolean> {
+export async function applyRetroAchievements(username: string, password: string): Promise<Record<string, boolean>> {
   const results: Record<string, boolean> = {};
+
+  // Try to get a connect token from the RA API
+  const token = await getRetroAchievementsToken(username, password);
+  // Fall back to using the password directly if API fails
+  const effectiveToken = token || password;
 
   for (const [emuId, cfg] of Object.entries(raEmulatorConfigs)) {
     try {
@@ -613,38 +691,26 @@ export function applyRetroAchievements(username: string, password: string): Reco
       const lines = content.split('\n');
 
       if (cfg.section) {
-        const sectionStart = lines.findIndex(l => l.trim() === `[${cfg.section}]`);
-        if (sectionStart === -1) {
-          lines.push('', `[${cfg.section}]`);
-          lines.push(cfg.enabled);
-          lines.push(cfg.username.replace('%s', username));
-          lines.push(cfg.password.replace('%s', password));
-        } else {
-          const existingEnabled = lines.slice(sectionStart).findIndex(l => /^enable|^raenabled|^achievementsenabled|^enabled\b/i.test(l.trim()));
-          if (existingEnabled === -1 || existingEnabled > lines.slice(sectionStart).findIndex(l => l.trim().startsWith('[') && !l.trim().startsWith(`[${cfg.section}]`))) {
-            lines.splice(sectionStart + 1, 0, cfg.enabled);
-          }
-          const existingUser = lines.slice(sectionStart).findIndex(l => /username/i.test(l));
-          if (existingUser === -1 || existingUser > lines.slice(sectionStart).findIndex(l => l.trim().startsWith('[') && !l.trim().startsWith(`[${cfg.section}]`))) {
-            lines.splice(sectionStart + 1, 0, cfg.username.replace('%s', username));
-          }
-          const existingPass = lines.slice(sectionStart).findIndex(l => /password/i.test(l));
-          if (existingPass === -1 || existingPass > lines.slice(sectionStart).findIndex(l => l.trim().startsWith('[') && !l.trim().startsWith(`[${cfg.section}]`))) {
-            lines.splice(sectionStart + 1, 0, cfg.password.replace('%s', password));
-          }
-          // Update existing lines
-          for (let i = sectionStart + 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.startsWith('[')) break;
-            if (/^enable|^raenabled|^achievementsenabled|^enabled\b/i.test(line)) {
-              lines[i] = cfg.enabled;
-            } else if (/^\s*username/i.test(line)) {
-              lines[i] = cfg.username.replace('%s', username);
-            } else if (/^\s*password/i.test(line)) {
-              lines[i] = cfg.password.replace('%s', password);
-            }
+        const sectionStart = findOrCreateSection(lines, cfg.section);
+        // Remove any existing matching keys in this section
+        stripKeysInSection(lines, cfg.section, cfg.enabled.split('=')[0].trim());
+        stripKeysInSection(lines, cfg.section, cfg.username.split('=')[0].trim());
+        stripKeysInSection(lines, cfg.section, cfg.token.split('=')[0].trim());
+        if (cfg.extra) {
+          for (const extra of cfg.extra) {
+            stripKeysInSection(lines, cfg.section, extra.split('=')[0].trim());
           }
         }
+        // Insert new values right after section header
+        const insertIdx = lines.findIndex(l => l.trim() === `[${cfg.section}]`) + 1;
+        const insertLines = [cfg.enabled, cfg.username.replace('%s', username), cfg.token.replace('%s', effectiveToken)];
+        if (cfg.extra) {
+          const now = Math.floor(Date.now() / 1000);
+          for (const extra of cfg.extra) {
+            insertLines.push(extra.replace('%d', String(now)));
+          }
+        }
+        lines.splice(insertIdx, 0, ...insertLines.map(l => l));
       } else {
         // RetroArch-style flat config
         const setLine = (prefix: string, value: string) => {
@@ -652,9 +718,12 @@ export function applyRetroAchievements(username: string, password: string): Reco
           if (idx !== -1) lines[idx] = value;
           else lines.push(value);
         };
+        // Remove cheevos_password if it exists (token takes precedence)
+        const passIdx = lines.findIndex(l => l.trim().startsWith('cheevos_password'));
+        if (passIdx !== -1) lines.splice(passIdx, 1);
         setLine('cheevos_enable', cfg.enabled);
         setLine('cheevos_username', cfg.username.replace('%s', username));
-        setLine('cheevos_password', cfg.password.replace('%s', password));
+        setLine('cheevos_token', cfg.token.replace('%s', effectiveToken));
       }
 
       writeFileSync(filePath, lines.join('\n'), 'utf-8');
@@ -665,4 +734,26 @@ export function applyRetroAchievements(username: string, password: string): Reco
   }
 
   return results;
+}
+
+function findOrCreateSection(lines: string[], section: string): number {
+  const idx = lines.findIndex(l => l.trim() === `[${section}]`);
+  if (idx !== -1) return idx;
+  lines.push('', `[${section}]`);
+  return lines.length - 1;
+}
+
+function stripKeysInSection(lines: string[], section: string, key: string): void {
+  let inSection = false;
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed === `[${section}]`) { inSection = true; continue; }
+    if (inSection) {
+      if (trimmed.startsWith('[')) break;
+      if (trimmed.startsWith(key) || trimmed.startsWith(key.toLowerCase()) || trimmed.startsWith(key.charAt(0).toUpperCase() + key.slice(1))) {
+        lines.splice(i, 1);
+        i--;
+      }
+    }
+  }
 }

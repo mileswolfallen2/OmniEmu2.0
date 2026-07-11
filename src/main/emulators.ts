@@ -375,6 +375,13 @@ export const knownEmulators: EmulatorConfig[] = [
           executablePath: 'melonDS.exe',
         },
       ],
+      darwin: [
+        {
+          url: 'https://melonds.kuribo64.net/downloads/melonDS-1.1-macOS-universal.zip',
+          format: 'zip',
+          executablePath: 'melonDS.app/Contents/MacOS/melonDS',
+        },
+      ],
       linux: [
         {
           url: 'https://github.com/melonDS-emu/melonDS/releases/download/1.1/melonDS-1.1-appimage-x86_64.zip',
@@ -518,6 +525,12 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'flycast'),
       join(omniEmuDir, 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
       join(home, 'Applications', 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
+    ],
+    melonds: [
+      join(omniEmuDir, 'melonDS.exe'),
+      join(omniEmuDir, 'melonDS'),
+      join(omniEmuDir, 'melonDS.app', 'Contents', 'MacOS', 'melonDS'),
+      join(home, 'Applications', 'melonDS.app', 'Contents', 'MacOS', 'melonDS'),
     ],
   };
   return common[emulatorId] || [join(omniEmuDir)];

@@ -20,8 +20,9 @@ export function applyTheme(theme: string) {
 }
 
 export function App() {
-  useGamepadNav();
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+
+  const { connected, showLegend, dismissLegend } = useGamepadNav(setCurrentPage, currentPage);
 
   useEffect(() => {
     window.omni.settings.get().then((s) => applyTheme(s.theme));
@@ -47,7 +48,7 @@ export function App() {
   const pageTitle: Record<Page, string> = {
     dashboard: 'Dashboard',
     emulators: 'Emulators',
-    library: 'Game Library',
+    library: 'Library',
     settings: 'Settings',
     controller: 'Controller',
     utilities: 'Utilities',
@@ -64,6 +65,22 @@ export function App() {
           {renderPage()}
         </div>
       </div>
+
+      {connected && showLegend && (
+        <div className="controller-legend" onClick={dismissLegend}>
+          <span>DPad: Navigate</span>
+          <span className="sep">|</span>
+          <span>A: Select</span>
+          <span className="sep">|</span>
+          <span>B/X/Select: Back</span>
+          <span className="sep">|</span>
+          <span>LB/RB: Tabs</span>
+          <span className="sep">|</span>
+          <span>Start: Focus</span>
+          <span className="sep">|</span>
+          <span>Guide: Dashboard</span>
+        </div>
+      )}
     </div>
   );
 }
