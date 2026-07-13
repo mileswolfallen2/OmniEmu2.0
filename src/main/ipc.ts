@@ -33,7 +33,11 @@ export function registerIpcHandlers(): void {
   // Emulators
   ipcMain.handle('emulators:list', () => {
     const plat = getPlatform();
+    const s = settings.get();
+    const beta = !!s.betaFeatures;
     return knownEmulators.filter(e => {
+      // Gate beta emulators behind beta toggle
+      if ((e.id === 'esde' || e.id === 'neostation' || e.id === 'pegasus') && !beta) return false;
       const hasDownload = e.downloads?.[plat] && e.downloads[plat]!.length > 0;
       const hasPackage = !!e.packageNames?.[plat];
       return hasDownload || hasPackage;
@@ -49,6 +53,39 @@ export function registerIpcHandlers(): void {
     async (event, emulatorId: string) => {
       const config = findEmulator(emulatorId);
       if (!config) throw new Error(`Unknown emulator: ${emulatorId}`);
+
+      // ES-DE on macOS: manual install (DMG requires license acceptance in Finder)
+      if (emulatorId === 'esde' && getPlatform() === 'darwin') {
+        const result = await dialog.showMessageBox(BrowserWindow.fromWebContents(event.sender)!, {
+          type: 'info',
+          title: 'Install ES-DE',
+          message: 'ES-DE must be installed manually on macOS',
+          detail: 'OmniEmu will open the ES-DE download page. Please download and install ES-DE, then return to OmniEmu and click Configure.',
+          buttons: ['Open Download Page', 'Cancel'],
+          defaultId: 0,
+        });
+        if (result.response === 0) {
+          shell.openExternal('https://es-de.org/#Download');
+        }
+        return checkEmulator(emulatorId);
+      }
+
+      // NeoStation on macOS: manual install (DMG requires license acceptance in Finder)
+      if (emulatorId === 'neostation' && getPlatform() === 'darwin') {
+        const result = await dialog.showMessageBox(BrowserWindow.fromWebContents(event.sender)!, {
+          type: 'info',
+          title: 'Install NeoStation',
+          message: 'NeoStation must be installed manually on macOS',
+          detail: 'OmniEmu will open the NeoStation download page. Please download and install NeoStation, then return to OmniEmu and click Configure.',
+          buttons: ['Open Download Page', 'Cancel'],
+          defaultId: 0,
+        });
+        if (result.response === 0) {
+          shell.openExternal('https://neostation.dev/downloads/');
+        }
+        return checkEmulator(emulatorId);
+      }
+
       if (!config.downloads) throw new Error(`No downloads configured for ${emulatorId}`);
 
       const platform = getPlatform();

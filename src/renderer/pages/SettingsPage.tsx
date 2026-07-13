@@ -225,6 +225,27 @@ export function SettingsPage() {
       </div>
 
       <div className="settings-section">
+        <h3>Experimental</h3>
+
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Enable Beta Features</div>
+            <div className="setting-desc">
+              Unlocks experimental emulators and frontends (ES-DE, NeoStation)
+            </div>
+          </div>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={!!settings.betaFeatures}
+              onChange={(e) => update({ betaFeatures: e.target.checked })}
+            />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+      </div>
+
+      <div className="settings-section">
         <h3>Presets</h3>
 
         <div className="setting-row">
@@ -390,7 +411,7 @@ export function SettingsPage() {
       <div className="settings-section">
         <h3>About</h3>
         <p className="text-sm text-muted">
-          OmniEmu v{updateInfo?.version || '0.1.2'} · Cross-platform emulator manager
+          OmniEmu v{updateInfo?.version || '0.1.3'} · Cross-platform emulator manager
           <br />
           Built with Electron + React + TypeScript
         </p>

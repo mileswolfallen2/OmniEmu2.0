@@ -117,6 +117,8 @@ export interface AppSettings {
   retroAchievementsPassword?: string;
   /** RetroAchievements Web API Key (from retroachievements.org/settings) */
   retroAchievementsApiKey?: string;
+  /** Enable experimental/beta features (ES-DE, NeoStation, etc.) */
+  betaFeatures?: boolean;
 }
 
 export interface RetroAchievement {

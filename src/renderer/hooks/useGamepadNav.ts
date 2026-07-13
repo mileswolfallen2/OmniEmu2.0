@@ -11,7 +11,7 @@ export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Pag
   const lastTime = useRef<Record<string, number>>({});
   const [connected, setConnected] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
-  const legendTimer = useRef<ReturnType<typeof setTimeout>>();
+  const legendTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const showLegendTemporarily = useCallback(() => {
     setShowLegend(true);

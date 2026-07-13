@@ -96,5 +96,12 @@
         "emu.cfg": "[config]\nrenderer = vulkan\nfullscreen = yes\nvsync = yes\nauto_region = yes\ncable_type = vga\nbroadcast = ntsc\nframeskip = 0\n[network]\nenable = no\n[input]\nenable_mouse = no\n"
       }
     }
+  ],
+  "esde": [
+    {
+      "name": "OmniEmu Recommended",
+      "description": "Pre-configures ES-DE with your ROM directory and installed emulators",
+      "files": {}
+    }
   ]
 }

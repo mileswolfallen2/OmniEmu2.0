@@ -5,6 +5,8 @@ interface ProgressMap {
   [emulatorId: string]: InstallProgress;
 }
 
+const isMacOS = navigator.userAgent.includes('Mac');
+
 export function EmulatorsPage() {
   const [states, setStates] = useState<EmulatorState[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,20 +211,40 @@ export function EmulatorsPage() {
               >
                 {!state.installed && state.config.supported && (
                   <>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      disabled={isActioning}
-                      onClick={() => handleInstallAndConfigure(state.config.id)}
-                    >
-                      {isActioning ? 'Working...' : 'Install & Configure'}
-                    </button>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      disabled={isActioning}
-                      onClick={() => handleInstall(state.config.id)}
-                    >
-                      Install Only
-                    </button>
+                    {state.config.id === 'esde' && isMacOS ? (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={isActioning}
+                        onClick={() => handleInstall(state.config.id)}
+                      >
+                        {isActioning ? 'Working...' : 'Install Manually'}
+                      </button>
+                    ) : state.config.id === 'neostation' && isMacOS ? (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={isActioning}
+                        onClick={() => handleInstall(state.config.id)}
+                      >
+                        {isActioning ? 'Working...' : 'Install Manually'}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          disabled={isActioning}
+                          onClick={() => handleInstallAndConfigure(state.config.id)}
+                        >
+                          {isActioning ? 'Working...' : 'Install & Configure'}
+                        </button>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          disabled={isActioning}
+                          onClick={() => handleInstall(state.config.id)}
+                        >
+                          Install Only
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
 

@@ -1,6 +1,6 @@
 {
   "name": "omniemu2",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Cross-platform emulator manager, game launcher and ROM manager",
   "main": "dist/main/index.js",
   "scripts": {
@@ -44,7 +44,6 @@
   "build": {
     "appId": "com.omniemu.app",
     "productName": "OmniEmu",
-    "afterPack": "./scripts/adhoc-sign.cjs",
     "publish": ["github"],
     "directories": {
       "output": "release",

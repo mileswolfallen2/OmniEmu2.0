@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { EmulatorState, SystemInfo, GameEntry } from '../../shared/types';
 
-export function Dashboard({ onNavigate }: { onNavigate?: (tab: string) => void }) {
+export function Dashboard({ onNavigate }: { onNavigate?: (tab: 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller' | 'utilities') => void }) {
   const [emulators, setEmulators] = useState<EmulatorState[]>([]);
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [recent, setRecent] = useState<GameEntry[]>([]);

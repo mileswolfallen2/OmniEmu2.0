@@ -26,7 +26,7 @@ function downloadFile(url: string, dest: string, onProgress: (pct: number) => vo
     const doRequest = (currentUrl: string) => {
       const protocol = currentUrl.startsWith('https') ? httpsGet : httpGet;
       const opts: RequestOptions = {
-        headers: { 'User-Agent': 'OmniEmu/0.1.2' },
+        headers: { 'User-Agent': 'OmniEmu/0.1.3' },
         timeout: 30000,
       };
       protocol(currentUrl, opts, (response) => {
@@ -85,14 +85,18 @@ function findAppInDir(dir: string): string | undefined {
 
   for (const e of dirs) {
     if (e.name.endsWith('.app')) {
-      const macosBin = join(dir, e.name, 'Contents', 'MacOS', basename(e.name, '.app'));
-      if (existsSync(macosBin)) return macosBin;
+      const macosDir = join(dir, e.name, 'Contents', 'MacOS');
+      if (existsSync(macosDir)) {
+        const candidates = readdirSync(macosDir);
+        const bin = candidates.find(b => statSync(join(macosDir, b)).mode & 0o111);
+        if (bin) return join(macosDir, bin);
+      }
     }
   }
 
   for (const e of files) {
     const lowerName = e.name.toLowerCase();
-    const knownNames = ['retroarch', 'dolphin-emu', 'dolphin', 'rpcs3', 'ryujinx', 'eden', 'mame', 'mame64', 'pcsx2', 'duckstation'];
+    const knownNames = ['retroarch', 'dolphin-emu', 'dolphin', 'rpcs3', 'ryujinx', 'eden', 'mame', 'mame64', 'pcsx2', 'duckstation', 'esde'];
     const isExec = e.name.endsWith('.exe') || e.name.endsWith('.AppImage')
       || knownNames.includes(lowerName);
     if (isExec) return join(dir, e.name);
@@ -152,18 +156,56 @@ async function extractArchive(
     }
     case 'dmg': {
       if (!isMacOS()) throw new Error('DMG files can only be extracted on macOS');
-      const mountPoint = `/tmp/omniemu_${emulatorId}_${randomBytes(4).toString('hex')}`;
+      onProgress('Opening DMG (please accept the license in the dialog)...');
+      execSync(`open "${archivePath}"`);
+      let mountPoint = '';
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          const lines = execSync('ls /Volumes/').toString().split('\n').filter(Boolean);
+          for (const vol of lines) {
+            const volPath = join('/Volumes', vol);
+            if (existsSync(join(volPath, 'ES-DE.app')) || existsSync(join(volPath, '..app'))) {
+              mountPoint = volPath;
+              break;
+            }
+          }
+          if (!mountPoint) {
+            for (const vol of lines) {
+              const volPath = join('/Volumes', vol);
+              if (statSync(volPath).isDirectory() && vol.toLowerCase().includes('es-de')) {
+                mountPoint = volPath;
+                break;
+              }
+            }
+          }
+          if (!mountPoint) {
+            for (const vol of lines) {
+              if (vol === 'Macintosh HD' || vol.startsWith('Recovery') || vol === 'OpenCode' || vol.startsWith('com.apple')) continue;
+              const volPath = join('/Volumes', vol);
+              try {
+                const entries = readdirSync(volPath);
+                if (entries.some(e => e.endsWith('.app'))) {
+                  mountPoint = volPath;
+                  break;
+                }
+              } catch { /* skip */ }
+            }
+          }
+          if (mountPoint) break;
+        } catch { /* retry */ }
+      }
+      if (!mountPoint) throw new Error('DMG did not mount within 60 seconds. Please accept the license dialog and try again.');
       try {
-        execOrThrow(`hdiutil attach "${archivePath}" -mountpoint "${mountPoint}" -nobrowse -quiet`);
-        const result = execSync(`ls "${mountPoint}" 2>/dev/null || true`).toString();
-        for (const item of result.split('\n').filter(Boolean)) {
+        const entries = readdirSync(mountPoint);
+        for (const item of entries) {
           const src = join(mountPoint, item);
           if (item.endsWith('.app') || (statSync(src).isDirectory() && !item.startsWith('.'))) {
             execOrThrow(`cp -R "${src}" "${destDir}/"`);
           }
         }
       } finally {
-        execOrThrow(`hdiutil detach "${mountPoint}" -quiet 2>/dev/null; true`);
+        try { execSync(`hdiutil detach "${mountPoint}" -quiet 2>/dev/null`); } catch { /* ignore */ }
       }
       break;
     }
@@ -343,6 +385,9 @@ export function findInstalledBinary(emulatorId: string, installDir: string, exec
     ];
     if (emulatorId === 'retroarch') {
       appNames.unshift('RetroArch.app');
+    }
+    if (emulatorId === 'esde') {
+      appNames.unshift('ES-DE.app');
     }
 
     for (const appName of appNames) {

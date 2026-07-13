@@ -436,6 +436,186 @@ export const knownEmulators: EmulatorConfig[] = [
       linux: 'https://github.com/flyinghead/flycast/releases',
     },
   },
+  {
+    id: 'esde',
+    name: 'ES-DE',
+    description: 'EmulationStation Desktop Edition — multi-system frontend & game launcher',
+    platforms: [
+      'nes', 'snes', 'n64', 'gb', 'gbc', 'gba', 'nds',
+      'ps1', 'ps2', 'ps3', 'psp', 'gc', 'wii', 'switch',
+      'arcade', 'dreamcast', 'sega-md', 'sega-saturn', 'sega-dc', 'pce',
+    ],
+    defaultPath: {
+      win32: 'C:\\Program Files\\ES-DE\\esde.exe',
+      darwin: '/Applications/ES-DE.app/Contents/MacOS/esde',
+      linux: '/usr/bin/es-de',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://gitlab.com/es-de/emulationstation-de/-/package_files/288156889/download',
+          format: 'exe',
+          installerType: 'nsis',
+          executablePath: 'esde.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://gitlab.com/es-de/emulationstation-de/-/package_files/288889626/download',
+          format: 'dmg',
+          arch: 'arm64',
+        },
+        {
+          url: 'https://gitlab.com/es-de/emulationstation-de/-/package_files/288889701/download',
+          format: 'dmg',
+          arch: 'x64',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://gitlab.com/es-de/emulationstation-de/-/package_files/288156961/download',
+          format: 'appimage',
+          arch: 'x64',
+        },
+        {
+          url: 'https://gitlab.com/es-de/emulationstation-de/-/package_files/288156935/download',
+          format: 'appimage',
+          arch: 'arm64',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://es-de.org/download/',
+      darwin: 'https://es-de.org/download/',
+      linux: 'https://es-de.org/download/',
+    },
+  },
+  {
+    id: 'neostation',
+    name: 'NeoStation',
+    description: 'Modern multi-platform emulation frontend — auto-discovers emulators and ROMs',
+    platforms: [
+      'nes', 'snes', 'n64', 'gb', 'gbc', 'gba', 'nds',
+      'ps1', 'ps2', 'ps3', 'psp', 'gc', 'wii', 'switch',
+      'arcade', 'dreamcast', 'sega-md', 'sega-saturn', 'sega-dc', 'pce',
+    ],
+    defaultPath: {
+      win32: 'C:\\Program Files\\NeoStation\\neostation.exe',
+      darwin: '/Applications/NeoStation.app/Contents/MacOS/neostation',
+      linux: '/usr/bin/neostation',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/misobadev/neostation-frontend/releases/download/v0.9.3%2B114/neostation-windows-x64-0.9.3+114.zip',
+          format: 'zip',
+          executablePath: 'neostation.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/misobadev/neostation-frontend/releases/download/v0.9.3%2B114/neostation-macos-universal-0.9.3+114.dmg',
+          format: 'dmg',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/misobadev/neostation-frontend/releases/download/v0.9.3%2B114/neostation-linux-x86_64-0.9.3+114.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://neostation.dev/downloads/',
+      darwin: 'https://neostation.dev/downloads/',
+      linux: 'https://neostation.dev/downloads/',
+    },
+  },
+  {
+    id: 'emubuddy',
+    name: 'EmuBuddy',
+    description: 'Cross-platform emulation frontend — one-click setup, game downloading, controller support',
+    platforms: [
+      'nes', 'snes', 'n64', 'gb', 'gbc', 'gba', 'nds',
+      'ps1', 'ps2', 'psp', 'gc', 'wii', 'dreamcast', 'sega-saturn',
+    ],
+    defaultPath: {
+      win32: 'C:\\Program Files\\EmuBuddy\\EmuBuddyLauncher.exe',
+      darwin: '/Applications/EmuBuddy.app/Contents/MacOS/EmuBuddy',
+      linux: '/usr/bin/emubuddy',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/computerex/EmuBuddy/releases/download/1.0.0/EmuBuddy-Windows-v1.0.0.zip',
+          format: 'zip',
+          executablePath: 'EmuBuddyLauncher.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/computerex/EmuBuddy/releases/download/1.0.0/EmuBuddy-macOS-v1.0.0.zip',
+          format: 'zip',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/computerex/EmuBuddy/releases/download/1.0.0/EmuBuddy-Linux-v1.0.0.zip',
+          format: 'zip',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://github.com/computerex/EmuBuddy',
+      darwin: 'https://github.com/computerex/EmuBuddy',
+      linux: 'https://github.com/computerex/EmuBuddy',
+    },
+  },
+  {
+    id: 'pegasus',
+    name: 'Pegasus Frontend',
+    description: 'Cross-platform customizable game launcher with theme support',
+    platforms: [
+      'nes', 'snes', 'n64', 'gb', 'gbc', 'gba', 'nds',
+      'ps1', 'ps2', 'ps3', 'psp', 'gc', 'wii', 'switch',
+      'arcade', 'dreamcast', 'sega-md', 'sega-saturn', 'sega-dc', 'pce',
+    ],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Pegasus\\pegasus-fe.exe',
+      darwin: '/Applications/Pegasus.app/Contents/MacOS/pegasus-fe',
+      linux: '/usr/bin/pegasus-fe',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/mmatyas/pegasus-frontend/releases/download/weekly_2024w38/pegasus-fe_alpha16-82-gc3462e68_win-mingw-static.zip',
+          format: 'zip',
+          executablePath: 'pegasus-fe.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/mmatyas/pegasus-frontend/releases/download/weekly_2024w38/pegasus-fe_alpha16-82-gc3462e68_macos-static.zip',
+          format: 'zip',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/mmatyas/pegasus-frontend/releases/download/weekly_2024w38/pegasus-fe_alpha16-82-gc3462e68_x11-static.zip',
+          format: 'zip',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://pegasus-frontend.org/download/',
+      darwin: 'https://pegasus-frontend.org/download/',
+      linux: 'https://pegasus-frontend.org/download/',
+    },
+  },
 ];
 
 export function findEmulator(id: string): EmulatorConfig | undefined {
@@ -525,6 +705,42 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'flycast'),
       join(omniEmuDir, 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
       join(home, 'Applications', 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
+      '/usr/local/bin/flycast',
+    ],
+    esde: [
+      join(omniEmuDir, 'esde.exe'),
+      join(omniEmuDir, 'ES-DE', 'esde.exe'),
+      join(omniEmuDir, 'es-de'),
+      join(omniEmuDir, 'ES-DE.app', 'Contents', 'MacOS', 'esde'),
+      join(home, 'Applications', 'ES-DE.app', 'Contents', 'MacOS', 'esde'),
+      '/usr/local/bin/es-de',
+      '/usr/bin/es-de',
+    ],
+    neostation: [
+      join(omniEmuDir, 'neostation.exe'),
+      join(omniEmuDir, 'NeoStation', 'neostation.exe'),
+      join(omniEmuDir, 'neostation'),
+      join(omniEmuDir, 'NeoStation.app', 'Contents', 'MacOS', 'neostation'),
+      join(home, 'Applications', 'NeoStation.app', 'Contents', 'MacOS', 'neostation'),
+      '/usr/local/bin/neostation',
+      '/usr/bin/neostation',
+    ],
+    emubuddy: [
+      join(omniEmuDir, 'EmuBuddyLauncher.exe'),
+      join(omniEmuDir, 'EmuBuddy', 'EmuBuddyLauncher.exe'),
+      join(omniEmuDir, 'EmuBuddyLauncher'),
+      join(omniEmuDir, 'EmuBuddy.app', 'Contents', 'MacOS', 'EmuBuddy'),
+      join(home, 'Applications', 'EmuBuddy.app', 'Contents', 'MacOS', 'EmuBuddy'),
+      '/usr/local/bin/emubuddy',
+      '/usr/bin/emubuddy',
+    ],
+    pegasus: [
+      join(omniEmuDir, 'pegasus-fe.exe'),
+      join(omniEmuDir, 'pegasus-fe'),
+      join(omniEmuDir, 'Pegasus.app', 'Contents', 'MacOS', 'pegasus-fe'),
+      join(home, 'Applications', 'Pegasus.app', 'Contents', 'MacOS', 'pegasus-fe'),
+      '/usr/local/bin/pegasus-fe',
+      '/usr/bin/pegasus-fe',
     ],
     melonds: [
       join(omniEmuDir, 'melonDS.exe'),
@@ -597,7 +813,11 @@ export function checkEmulator(id: string): EmulatorState {
 }
 
 export function getAllEmulatorStates(): EmulatorState[] {
-  return knownEmulators.map((e) => checkEmulator(e.id));
+  const s = settings.get();
+  const beta = !!s.betaFeatures;
+  return knownEmulators
+    .filter(e => (e.id === 'esde' || e.id === 'neostation' || e.id === 'pegasus') ? beta : true)
+    .map((e) => checkEmulator(e.id));
 }
 
 export function launchEmulator(emulatorId: string): boolean {
@@ -697,6 +917,14 @@ function launchArgs(emulatorId: string, romPath: string): string {
       return `"${romPath}"`;
     case 'flycast':
       return `"${romPath}"`;
+    case 'esde':
+      return '';
+    case 'neostation':
+      return '';
+    case 'emubuddy':
+      return '';
+    case 'pegasus':
+      return '';
     default:
       return `"${romPath}"`;
   }

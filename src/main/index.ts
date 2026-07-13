@@ -6,6 +6,7 @@ import { settings } from './settings';
 import { isMacOS } from './platform';
 import { ensureRomsStructure } from './emulators';
 import { setupAutoUpdater } from './updater';
+import { generatePegasusCollectionsForRomDir } from './configurator';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -122,6 +123,14 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   createWindow();
   createTray();
+
+  // Auto-generate Pegasus collection files if Pegasus is configured
+  try {
+    const s = settings.get();
+    if (s.betaFeatures && s.romsDirectory) {
+      generatePegasusCollectionsForRomDir(s.romsDirectory);
+    }
+  } catch { /* ignore */ }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
