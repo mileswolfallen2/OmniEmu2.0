@@ -235,7 +235,7 @@ export function SettingsPage() {
           <div>
             <div className="setting-label">Enable Beta Features</div>
             <div className="setting-desc">
-              Unlocks experimental emulators and frontends (ES-DE, NeoStation)
+              Unlocks experimental emulators, frontends, and decompilations (ES-DE, NeoStation, SoH, etc.)
             </div>
           </div>
           <label className="toggle">

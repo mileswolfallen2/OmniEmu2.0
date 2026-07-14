@@ -156,6 +156,32 @@ export interface SystemInfo {
   appDataDir: string;
 }
 
+export interface DecompProject {
+  id: string;
+  name: string;
+  description: string;
+  platform: string;
+  githubUrl: string;
+  /** GitHub repo in "owner/repo" format for release downloads */
+  githubRepo: string;
+  /** Executable path inside the extracted directory */
+  executablePath: Record<Platform, string>;
+  /** ROM file extensions this port expects (e.g. ['.z64', '.n64']) */
+  romExtensions: string[];
+  requiresRom: boolean;
+  features: string[];
+}
+
+export interface DecompState {
+  installed: boolean;
+  version?: string;
+  path?: string;
+  config: DecompProject;
+  /** Whether a ROM has been supplied in the rom directory */
+  hasRom: boolean;
+  romPath?: string;
+}
+
 export interface EmulatorState {
   installed: boolean;
   version?: string;
@@ -217,4 +243,16 @@ export interface SyncthingRemoteDevice {
   name: string;
   addresses: string[];
   connected: boolean;
+}
+
+export interface SyncthingPendingDevice {
+  id: string;
+  name: string;
+  address?: string;
+}
+
+export interface SyncthingPendingFolder {
+  folderId: string;
+  folderLabel: string;
+  deviceId: string;
 }

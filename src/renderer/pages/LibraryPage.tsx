@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import type { GameEntry } from '../../shared/types';
+import type { GameEntry, DecompState } from '../../shared/types';
 import { GameDetailModal } from '../components/GameDetailModal';
 
 const platformIcons: Record<string, string> = {
@@ -12,6 +12,8 @@ const platformIcons: Record<string, string> = {
 
 export function LibraryPage() {
   const [games, setGames] = useState<GameEntry[]>([]);
+  const [decompGames, setDecompGames] = useState<DecompState[]>([]);
+  const [betaFeatures, setBetaFeatures] = useState(false);
   const [loading, setLoading] = useState(false);
   const [romsDir, setRomsDir] = useState<string>('');
   const [selectedGame, setSelectedGame] = useState<GameEntry | null>(null);
@@ -19,6 +21,7 @@ export function LibraryPage() {
   useEffect(() => {
     (async () => {
       const settings = await window.omni.settings.get();
+      setBetaFeatures(!!settings.betaFeatures);
       if (settings.romsDirectory) {
         setRomsDir(settings.romsDirectory);
         setLoading(true);
@@ -26,6 +29,9 @@ export function LibraryPage() {
         setGames(await scrapeMissingArt(results));
         setLoading(false);
       }
+      // Load installed decomps
+      const decompStates = await window.omni.decomps.states();
+      setDecompGames(decompStates.filter(d => d.installed));
     })();
   }, []);
 
@@ -60,6 +66,12 @@ export function LibraryPage() {
 
   const handleLaunch = async (game: GameEntry) => {
     await window.omni.game.launch(game.emulatorId, game.romPath);
+  };
+
+  const handleDecompLaunch = async (decomp: DecompState) => {
+    if (decomp.romPath) {
+      await window.omni.decomps.launch(decomp.config.id);
+    }
   };
 
   const handleShowDetail = (game: GameEntry) => {
@@ -156,6 +168,47 @@ export function LibraryPage() {
           </div>
         </div>
       )}
+
+      {/* ── Installed Decomps as Games (Beta) ──────────────── */}
+      {betaFeatures && decompGames.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <div className="info-bar">
+            <span style={{ fontWeight: 600 }}>Decompilations <span className="badge-beta">Beta</span></span>
+            <span className="text-sm text-muted">
+              {decompGames.filter(d => d.hasRom).length} ready · {decompGames.length} installed
+            </span>
+          </div>
+
+          <div className="library-grid">
+            {decompGames.map((decomp) => (
+              <div
+                className="game-card"
+                key={decomp.config.id}
+                onClick={() => decomp.hasRom && handleDecompLaunch(decomp)}
+                onKeyDown={(e) => {
+                  if ((e.key === 'Enter' || e.key === ' ') && decomp.hasRom) handleDecompLaunch(decomp);
+                }}
+                tabIndex={0}
+                role="button"
+                title={decomp.hasRom ? `Launch ${decomp.config.name}` : `${decomp.config.name} — needs ROM`}
+                style={!decomp.hasRom ? { opacity: 0.6 } : undefined}
+              >
+                <div className="game-card-cover">
+                  <span style={{ fontSize: 32 }}>{platformIcons[decomp.config.platform.toLowerCase()] || '🎮'}</span>
+                </div>
+                <div className="game-card-info">
+                  <div className="game-card-title">{decomp.config.name}</div>
+                  <div className="game-card-platform">
+                    {decomp.config.platform} · decomp
+                    {!decomp.hasRom && ' · needs ROM'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {selectedGame && (
         <GameDetailModal
           game={selectedGame}

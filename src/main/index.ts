@@ -3,11 +3,70 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { registerIpcHandlers } from './ipc';
 import { settings } from './settings';
-import { isMacOS } from './platform';
+import { isMacOS, isLinux } from './platform';
 import { ensureRomsStructure } from './emulators';
 import { setupAutoUpdater } from './updater';
 import { generatePegasusCollectionsForRomDir } from './configurator';
 import { startSyncthing } from './syncthing';
+
+// ---------------------------------------------------------------------------
+// Steam Deck / SteamOS (Gamescope) compatibility
+// ---------------------------------------------------------------------------
+// When launched in Gaming Mode the app runs inside Gamescope, a Wayland
+// compositor that does NOT expose the kernel features Chromium's sandbox
+// relies on.  Without the flags below the renderer process segfaults
+// immediately on launch.  Desktop Mode works fine because Gamescope is not
+// involved.
+// ---------------------------------------------------------------------------
+
+function isSteamDeck(): boolean {
+  if (!isLinux()) return false;
+  const steamos =
+    existsSync('/usr/bin/steamos-session-select') ||
+    existsSync('/etc/os-release') &&
+      (() => {
+        try {
+          const os = require('fs').readFileSync('/etc/os-release', 'utf-8');
+          return os.includes('SteamOS');
+        } catch { return false; }
+      })();
+  return steamos;
+}
+
+function applySteamDeckFlags(): void {
+  if (!isLinux()) return;
+
+  // Chromium sandbox — Gamescope does not support the required kernel
+  // namespacing so the sandbox must be disabled or it segfaults.
+  app.commandLine.appendSwitch('no-sandbox');
+
+  // GPU sandbox — Gamescope already composites; letting Chromium create a
+  // second GPU sandbox causes a driver conflict.
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+
+  // ForceANGLE + SwiftShader — fallback to software GL when the native
+  // Mesa driver misbehaves inside Gamescope.  On a real Steam Deck the
+  // ANGLE OpenGL-ES path still hits the AMD driver for performance, but
+  // this prevents the "lost device" crash on session transitions.
+  if (isSteamDeck()) {
+    app.commandLine.appendSwitch('use-gl', 'angle');
+    app.commandLine.appendSwitch('use-angle', 'swiftshader');
+    app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
+  }
+
+  // Disable the GPU blacklisting — Steam Deck's custom Mesa driver is
+  // frequently mis-identified as "too old" by Chromium's blocklist.
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
+  // Disable GPU compositing to let Gamescope handle all compositing.
+  app.commandLine.appendSwitch('disable-gpu-compositing');
+
+  // /dev/shm on SteamOS is too small for Chromium's shared memory
+  // segments — use /tmp instead.
+  app.commandLine.appendSwitch('disable-dev-shm-usage');
+}
+
+applySteamDeckFlags();
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -104,7 +163,9 @@ function createTray(): void {
   tray.on('click', () => mainWindow?.show());
 }
 
-// Prevent multiple instances
+// Prevent multiple instances — if a stale lock file from a previous
+// session (e.g. Desktop Mode) is lingering, force-remove it so Gaming
+// Mode can start cleanly.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -118,11 +179,33 @@ if (!gotLock) {
   });
 }
 
+// On SteamOS, /tmp is a small tmpfs that fills up fast with Chromium
+// caches.  Point the disk cache at the user data directory instead so
+// it persists across sessions and has more room.
+if (isLinux()) {
+  const cacheDir = join(app.getPath('userData'), 'cache');
+  if (!existsSync(cacheDir)) {
+    try { require('fs').mkdirSync(cacheDir, { recursive: true }); } catch { /* ignore */ }
+  }
+  app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
+}
+
 app.whenReady().then(() => {
   ensureRomsStructure();
   setupAutoUpdater();
   registerIpcHandlers();
-  createWindow();
+
+  try {
+    createWindow();
+  } catch (err) {
+    // If the window creation fails (common on Steam Deck Gaming Mode
+    // when hardware acceleration misbehaves), retry with GPU disabled.
+    console.error('Window creation failed, retrying without GPU:', err);
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
+    try { createWindow(); } catch { /* fatal */ }
+  }
+
   createTray();
 
   // Auto-generate Pegasus collection files if Pegasus is configured

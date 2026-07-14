@@ -458,4 +458,79 @@ export async function getSyncthingVersion(): Promise<string> {
   }
 }
 
+export interface PendingDeviceInfo {
+  id: string;
+  name: string;
+  address?: string;
+}
+
+export interface PendingFolderInfo {
+  folderId: string;
+  folderLabel: string;
+  deviceId: string;
+}
+
+export async function getPendingDevices(): Promise<PendingDeviceInfo[]> {
+  try {
+    const data = await apiRequest('GET', '/rest/cluster/pending/devices');
+    if (!data) return [];
+    return Object.entries(data).map(([id, info]: [string, any]) => ({
+      id,
+      name: info.name || '',
+      address: info.address || '',
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function acceptPendingDevice(deviceId: string): Promise<boolean> {
+  try {
+    await apiRequest('PUT', `/rest/cluster/pending/devices?device=${deviceId}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getPendingFolders(): Promise<PendingFolderInfo[]> {
+  try {
+    const data = await apiRequest('GET', '/rest/cluster/pending/folders');
+    if (!data) return [];
+    const results: PendingFolderInfo[] = [];
+    for (const [folderId, info] of Object.entries<any>(data)) {
+      const deviceIds = info.offeredBy ? Object.keys(info.offeredBy) : [];
+      for (const deviceId of deviceIds) {
+        results.push({ folderId, folderLabel: info.label || folderId, deviceId });
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+export async function acceptPendingFolder(
+  folderId: string,
+  folderLabel: string,
+  localPath: string,
+  deviceId: string
+): Promise<boolean> {
+  try {
+    await apiRequest('POST', '/rest/config/folders', {
+      id: folderId,
+      label: folderLabel,
+      path: localPath,
+      type: 'sendreceive',
+      rescanIntervalS: 3600,
+      fsWatcherEnabled: true,
+      fsWatcherDelayS: 10,
+      devices: [{ deviceID: deviceId }],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export { getBinaryPath, getPort, getApiKey, apiUrl, getSyncthingDir };

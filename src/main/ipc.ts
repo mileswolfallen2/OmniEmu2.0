@@ -15,6 +15,15 @@ import {
   getSystemEmulators,
   ensureRomsStructure,
 } from './emulators';
+import {
+  getAllDecompStates,
+  checkDecomp,
+  installDecomp,
+  uninstallDecomp,
+  launchDecomp,
+  openDecompWebsite,
+  setDecompRomPath,
+} from './decomps';
 import { installEmulator, findInstalledBinary } from './installer';
 import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerConfig, applyRetroAchievements } from './configurator';
 import { settings } from './settings';
@@ -34,7 +43,12 @@ import {
   removeRemoteDevice,
   addSharedFolder,
   removeSharedFolder,
+  getPendingDevices,
+  acceptPendingDevice,
+  getPendingFolders,
+  acceptPendingFolder,
 } from './syncthing';
+import { guessSavePathFromLabel, getEmulatorSaveDirs } from './saveManager';
 
 export function registerIpcHandlers(): void {
   // System
@@ -168,6 +182,50 @@ export function registerIpcHandlers(): void {
       return true;
     }
     return false;
+  });
+
+  // Decomps
+  ipcMain.handle('decomps:states', () => getAllDecompStates());
+  ipcMain.handle('decomps:check', (_event, id: string) => checkDecomp(id));
+
+  ipcMain.handle('decomps:install', async (event, id: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const sendProgress = (p: any) => {
+      win?.webContents.send('decomps:install-progress', p);
+    };
+    try {
+      const state = await installDecomp(id, sendProgress);
+      return state;
+    } catch (err: any) {
+      sendProgress({ decompId: id, stage: 'error', percent: 0, message: 'Failed', error: err.message });
+      return checkDecomp(id);
+    }
+  });
+
+  ipcMain.handle('decomps:uninstall', (_event, id: string) => {
+    const removed = uninstallDecomp(id);
+    return { removed, state: checkDecomp(id) };
+  });
+
+  ipcMain.handle('decomps:launch', (_event, id: string) => launchDecomp(id));
+
+  ipcMain.handle('decomps:open-website', (_event, id: string) => openDecompWebsite(id));
+
+  ipcMain.handle('decomps:set-rom', (_event, id: string, romPath: string) => {
+    setDecompRomPath(id, romPath);
+    return checkDecomp(id);
+  });
+
+  ipcMain.handle('decomps:select-rom', async (_event, id: string) => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      title: 'Select ROM file',
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+      setDecompRomPath(id, result.filePaths[0]);
+      return { romPath: result.filePaths[0], state: checkDecomp(id) };
+    }
+    return { romPath: null, state: checkDecomp(id) };
   });
 
   // ROMs / Games
@@ -425,5 +483,66 @@ export function registerIpcHandlers(): void {
       return true;
     }
     return false;
+  });
+
+  // Pending devices and folders
+  ipcMain.handle('cloud:pending-devices', async () => {
+    try {
+      return await getPendingDevices();
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle('cloud:accept-pending-device', async (_event, deviceId: string) => {
+    try {
+      return await acceptPendingDevice(deviceId);
+    } catch {
+      return false;
+    }
+  });
+
+  ipcMain.handle('cloud:pending-folders', async () => {
+    try {
+      return await getPendingFolders();
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle('cloud:accept-pending-folder', async (_event, folderId: string, folderLabel: string, localPath: string, deviceId: string) => {
+    try {
+      return await acceptPendingFolder(folderId, folderLabel, localPath, deviceId);
+    } catch {
+      return false;
+    }
+  });
+
+  ipcMain.handle('cloud:guess-path', (_event, label: string) => {
+    return guessSavePathFromLabel(label);
+  });
+
+  ipcMain.handle('cloud:emulator-dirs', async () => {
+    return getEmulatorSaveDirs();
+  });
+
+  ipcMain.handle('cloud:toggle-folder-sync', async (_event, emuId: string, sync: boolean) => {
+    try {
+      const dirs = getEmulatorSaveDirs();
+      const emu = dirs.find(d => d.id === emuId);
+      if (!emu || !emu.saves) return false;
+      const folderId = `saves-${emuId}`;
+      if (sync) {
+        // Create the folder and share with all paired devices
+        const status = await getSyncthingStatus();
+        const deviceIds = status.remoteDevices.map(d => d.id);
+        return await addSharedFolder(folderId, `${emu.name} Saves`, emu.saves, deviceIds);
+      } else {
+        // Remove the folder
+        return await removeSharedFolder(folderId);
+      }
+    } catch {
+      return false;
+    }
   });
 }

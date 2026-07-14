@@ -1,6 +1,8 @@
 import type {
   EmulatorConfig,
   EmulatorState,
+  DecompProject,
+  DecompState,
   GameEntry,
   GameMetadata,
   AchievementInfo,
@@ -10,6 +12,8 @@ import type {
   ConfigPreset,
   EmulatorSaves,
   SyncthingStatus,
+  SyncthingPendingDevice,
+  SyncthingPendingFolder,
 } from '../shared/types';
 
 declare global {
@@ -33,6 +37,17 @@ declare global {
         openWebsite: (id: string) => Promise<boolean>;
         updateControllerConfig: (id: string, installPath: string, controllerName?: string) => Promise<boolean>;
         onInstallProgress: (cb: (p: InstallProgress) => void) => () => void;
+      };
+      decomps: {
+        states: () => Promise<DecompState[]>;
+        check: (id: string) => Promise<DecompState>;
+        install: (id: string) => Promise<DecompState>;
+        uninstall: (id: string) => Promise<{ removed: boolean; state: DecompState }>;
+        launch: (id: string) => Promise<boolean>;
+        openWebsite: (id: string) => Promise<boolean>;
+        setRom: (id: string, romPath: string) => Promise<DecompState>;
+        selectRom: (id: string) => Promise<{ romPath: string | null; state: DecompState }>;
+        onInstallProgress: (cb: (p: { decompId: string; stage: string; percent: number; message: string }) => void) => () => void;
       };
       roms: {
         scan: (directory?: string) => Promise<GameEntry[]>;
@@ -94,6 +109,13 @@ declare global {
         addFolder: (id: string, label: string, path: string, deviceIds: string[]) => Promise<boolean>;
         removeFolder: (folderId: string) => Promise<boolean>;
         openWebUI: () => Promise<boolean>;
+        pendingDevices: () => Promise<SyncthingPendingDevice[]>;
+        acceptPendingDevice: (deviceId: string) => Promise<boolean>;
+        pendingFolders: () => Promise<SyncthingPendingFolder[]>;
+        acceptPendingFolder: (folderId: string, folderLabel: string, localPath: string, deviceId: string) => Promise<boolean>;
+        guessPath: (label: string) => Promise<string | null>;
+        emulatorDirs: () => Promise<{ id: string; name: string; saves: string | null }[]>;
+        toggleFolderSync: (emuId: string, sync: boolean) => Promise<boolean>;
         onInstallProgress: (cb: (progress: { stage: string; percent: number; message: string }) => void) => () => void;
       };
     };

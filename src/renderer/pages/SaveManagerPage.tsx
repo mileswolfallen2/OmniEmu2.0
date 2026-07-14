@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import type { GameEntry, EmulatorSaves, SaveEntry } from '../../shared/types';
+import type { GameEntry, EmulatorSaves, SaveEntry, SyncthingFolder } from '../../shared/types';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -48,6 +48,9 @@ export function SaveManagerPage() {
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [view, setView] = useState<'games' | 'emulators'>('games');
+  const [syncFolders, setSyncFolders] = useState<SyncthingFolder[]>([]);
+  const [cloudEnabled, setCloudEnabled] = useState(false);
+  const [togglingSync, setTogglingSync] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -60,6 +63,14 @@ export function SaveManagerPage() {
       const roms = await window.omni.roms.scan(settings.romsDirectory);
       setGames(roms);
     }
+    // Detect cloud sync: either the flag is set, or Syncthing is actually running
+    let cloudOk = !!settings.cloudSyncEnabled;
+    try {
+      const cloudStatus = await window.omni.cloud.status();
+      setSyncFolders(cloudStatus.folders || []);
+      if (cloudStatus.running) cloudOk = true;
+    } catch { /* ignore */ }
+    setCloudEnabled(cloudOk);
     setLoading(false);
   }, []);
 
@@ -108,6 +119,34 @@ export function SaveManagerPage() {
 
   const handleOpenEmuFolder = (emu: EmulatorSaves) => {
     window.omni.saves.openFolder(emu.saveDir);
+  };
+
+  const isDirSynced = (dirPath: string): SyncthingFolder | undefined => {
+    return syncFolders.find(f => f.path === dirPath);
+  };
+
+  const handleToggleSync = async (emu: EmulatorSaves) => {
+    const existing = isDirSynced(emu.saveDir);
+    setTogglingSync(emu.emulatorId);
+    try {
+      if (existing) {
+        await window.omni.cloud.removeFolder(existing.id);
+        setSyncFolders(prev => prev.filter(f => f.id !== existing.id));
+        showStatus(`${emu.emulatorName} sync disabled`);
+      } else {
+        const id = `saves-${emu.emulatorId}`;
+        const ok = await window.omni.cloud.addFolder(id, `${emu.emulatorName} Saves`, emu.saveDir, []);
+        if (ok) {
+          setSyncFolders(prev => [...prev, { id, label: `${emu.emulatorName} Saves`, path: emu.saveDir, type: 'sendreceive' }]);
+          showStatus(`${emu.emulatorName} sync enabled`);
+        } else {
+          showStatus('Failed to enable sync');
+        }
+      }
+    } catch {
+      showStatus('Sync toggle failed');
+    }
+    setTogglingSync(null);
   };
 
   return (
@@ -192,6 +231,7 @@ export function SaveManagerPage() {
                             save={save}
                             onDelete={handleDelete}
                             onBackup={handleBackup}
+                            syncFolders={syncFolders}
                           />
                         ))}
                       </div>
@@ -215,6 +255,7 @@ export function SaveManagerPage() {
                       save={save}
                       onDelete={handleDelete}
                       onBackup={handleBackup}
+                      syncFolders={syncFolders}
                     />
                   ))}
                 </div>
@@ -234,12 +275,24 @@ export function SaveManagerPage() {
                   {emu.saves.length} file{emu.saves.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => handleOpenEmuFolder(emu)}
-              >
-                Open Folder
-              </button>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {cloudEnabled && emu.saves.length > 0 && (
+                  <button
+                    className={`btn btn-sm ${isDirSynced(emu.saveDir) ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleToggleSync(emu)}
+                    disabled={togglingSync === emu.emulatorId}
+                    title={isDirSynced(emu.saveDir) ? 'Sync enabled — click to disable' : 'Enable sync for this folder'}
+                  >
+                    {togglingSync === emu.emulatorId ? '...' : isDirSynced(emu.saveDir) ? '☁ Synced' : '☁ Sync'}
+                  </button>
+                )}
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleOpenEmuFolder(emu)}
+                >
+                  Open Folder
+                </button>
+              </div>
             </div>
             {emu.saves.length === 0 ? (
               <p className="text-sm text-muted" style={{ padding: '0 12px 12px' }}>No saves.</p>
@@ -262,11 +315,18 @@ export function SaveManagerPage() {
   );
 }
 
-function SaveRow({ save, onDelete, onBackup }: {
+function isSaveSynced(filePath: string, syncFolders: SyncthingFolder[]): boolean {
+  if (!syncFolders.length) return false;
+  return syncFolders.some(f => filePath.startsWith(f.path));
+}
+
+function SaveRow({ save, onDelete, onBackup, syncFolders }: {
   save: SaveEntry;
   onDelete: (s: SaveEntry) => void;
   onBackup: (s: SaveEntry) => void;
+  syncFolders?: SyncthingFolder[];
 }) {
+  const synced = syncFolders && isSaveSynced(save.filePath, syncFolders);
   return (
     <div style={{
       display: 'flex',
@@ -289,6 +349,11 @@ function SaveRow({ save, onDelete, onBackup }: {
           {save.fileName} · {formatSize(save.fileSize)} · {formatDate(save.lastModified)}
         </div>
       </div>
+      {synced && (
+        <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, whiteSpace: 'nowrap' }} title="Synced via Cloud Sync">
+          ☁
+        </span>
+      )}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
         <button className="btn btn-secondary btn-sm" onClick={() => onBackup(save)}>Backup</button>
         <button className="btn btn-danger btn-sm" onClick={() => onDelete(save)}>Delete</button>

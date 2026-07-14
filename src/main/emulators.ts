@@ -771,6 +771,147 @@ export const knownEmulators: EmulatorConfig[] = [
       linux: 'https://azahar-emu.org/',
     },
   },
+  {
+    id: 'project64',
+    name: 'Project64',
+    description: 'Nintendo 64 emulator',
+    platforms: ['n64'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Project64 3.0\\Project64.exe',
+      darwin: '',
+      linux: '',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://www.pj64-emu.com/file/project64-3-0-1-5664-2df3434/',
+          format: 'zip',
+          executablePath: 'Project64.exe',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://www.pj64-emu.com/',
+      darwin: 'https://www.pj64-emu.com/',
+      linux: 'https://www.pj64-emu.com/',
+    },
+  },
+  {
+    id: 'snes9x',
+    name: 'Snes9x',
+    description: 'Super Nintendo emulator',
+    platforms: ['snes'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Snes9x\\snes9x-x64.exe',
+      darwin: '/Applications/Snes9x.app/Contents/MacOS/snes9x',
+      linux: '/usr/bin/snes9x',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/snes9xgit/snes9x/releases/download/1.63/snes9x-1.63-win32-x64.zip',
+          format: 'zip',
+          executablePath: 'snes9x-x64.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/snes9xgit/snes9x/releases/download/1.63/Snes9x-1.63-Mac.zip',
+          format: 'zip',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/snes9xgit/snes9x/releases/download/1.63/Snes9x-1.63-x86_64.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://www.snes9x.net/',
+      darwin: 'https://www.snes9x.net/',
+      linux: 'https://www.snes9x.net/',
+    },
+  },
+  {
+    id: 'mgba',
+    name: 'mGBA',
+    description: 'Game Boy Advance emulator',
+    platforms: ['gba', 'gb', 'gbc'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\mGBA\\mGBA.exe',
+      darwin: '/Applications/mGBA.app/Contents/MacOS/mGBA',
+      linux: '/usr/bin/mgba',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/mgba-emu/mgba/releases/download/0.10.5/mGBA-0.10.5-win64.7z',
+          format: '7z',
+          executablePath: 'mGBA.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/mgba-emu/mgba/releases/download/0.10.5/mGBA-0.10.5-macos.dmg',
+          format: 'dmg',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/mgba-emu/mgba/releases/download/0.10.5/mGBA-0.10.5-appimage-x64.appimage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://mgba.io/',
+      darwin: 'https://mgba.io/',
+      linux: 'https://mgba.io/',
+    },
+  },
+  {
+    id: 'mesen2',
+    name: 'Mesen2',
+    description: 'Multi-system emulator (NES, SNES, GB, GBA, PC Engine)',
+    platforms: ['nes', 'snes', 'gb', 'gbc', 'gba', 'pce'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Mesen\\Mesen.exe',
+      darwin: '/Applications/Mesen.app/Contents/MacOS/Mesen',
+      linux: '/usr/bin/Mesen',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/SourMesen/Mesen2/releases/download/2.1.1/Mesen_2.1.1_Windows.zip',
+          format: 'zip',
+          executablePath: 'Mesen.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/SourMesen/Mesen2/releases/download/2.1.1/Mesen_2.1.1_macOS_ARM64_AppleSilicon.zip',
+          format: 'zip',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/SourMesen/Mesen2/releases/download/2.1.1/Mesen_2.1.1_Linux_x64.zip',
+          format: 'zip',
+          executablePath: 'Mesen',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://www.mesen.ca/',
+      darwin: 'https://www.mesen.ca/',
+      linux: 'https://www.mesen.ca/',
+    },
+  },
 ];
 
 export function findEmulator(id: string): EmulatorConfig | undefined {
@@ -930,6 +1071,40 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'Azahar.app', 'Contents', 'MacOS', 'azahar'),
       join(home, 'Applications', 'Azahar.app', 'Contents', 'MacOS', 'azahar'),
       '/usr/bin/azahar',
+    ],
+    project64: [
+      join(omniEmuDir, 'Project64.exe'),
+      join(omniEmuDir, 'Project64', 'Project64.exe'),
+      'C:\\Program Files\\Project64 3.0\\Project64.exe',
+      'C:\\Program Files (x86)\\Project64 3.0\\Project64.exe',
+    ],
+    snes9x: [
+      join(omniEmuDir, 'snes9x-x64.exe'),
+      join(omniEmuDir, 'snes9x', 'snes9x-x64.exe'),
+      join(omniEmuDir, 'snes9x'),
+      join(home, 'Applications', 'Snes9x.app', 'Contents', 'MacOS', 'snes9x'),
+      '/usr/bin/snes9x',
+      '/usr/local/bin/snes9x',
+      '/snap/bin/snes9x',
+    ],
+    mgba: [
+      join(omniEmuDir, 'mGBA.exe'),
+      join(omniEmuDir, 'mGBA', 'mGBA.exe'),
+      join(omniEmuDir, 'mgba-qt'),
+      join(omniEmuDir, 'mGBA.app', 'Contents', 'MacOS', 'mGBA'),
+      join(home, 'Applications', 'mGBA.app', 'Contents', 'MacOS', 'mGBA'),
+      '/usr/bin/mgba',
+      '/usr/local/bin/mgba',
+      '/snap/bin/mgba',
+    ],
+    mesen2: [
+      join(omniEmuDir, 'Mesen.exe'),
+      join(omniEmuDir, 'Mesen', 'Mesen.exe'),
+      join(omniEmuDir, 'Mesen'),
+      join(omniEmuDir, 'Mesen.app', 'Contents', 'MacOS', 'Mesen'),
+      join(home, 'Applications', 'Mesen.app', 'Contents', 'MacOS', 'Mesen'),
+      '/usr/bin/Mesen',
+      '/usr/local/bin/Mesen',
     ],
   };
   return common[emulatorId] || [join(omniEmuDir)];

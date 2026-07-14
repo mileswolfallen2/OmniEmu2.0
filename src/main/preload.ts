@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   EmulatorConfig,
   EmulatorState,
+  DecompProject,
+  DecompState,
   GameEntry,
   SystemInfo,
   AppSettings,
@@ -10,6 +12,8 @@ import type {
   GameMetadata,
   AchievementInfo,
   SyncthingStatus,
+  SyncthingPendingDevice,
+  SyncthingPendingFolder,
 } from '../shared/types';
 
 const api = {
@@ -63,6 +67,25 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, p: InstallProgress) => cb(p);
       ipcRenderer.on('emulators:install-progress', handler);
       return () => ipcRenderer.removeListener('emulators:install-progress', handler);
+    },
+  },
+
+  decomps: {
+    states: (): Promise<DecompState[]> => ipcRenderer.invoke('decomps:states'),
+    check: (id: string): Promise<DecompState> => ipcRenderer.invoke('decomps:check', id),
+    install: (id: string): Promise<DecompState> => ipcRenderer.invoke('decomps:install', id),
+    uninstall: (id: string): Promise<{ removed: boolean; state: DecompState }> =>
+      ipcRenderer.invoke('decomps:uninstall', id),
+    launch: (id: string): Promise<boolean> => ipcRenderer.invoke('decomps:launch', id),
+    openWebsite: (id: string): Promise<boolean> => ipcRenderer.invoke('decomps:open-website', id),
+    setRom: (id: string, romPath: string): Promise<DecompState> =>
+      ipcRenderer.invoke('decomps:set-rom', id, romPath),
+    selectRom: (id: string): Promise<{ romPath: string | null; state: DecompState }> =>
+      ipcRenderer.invoke('decomps:select-rom', id),
+    onInstallProgress: (cb: (progress: { decompId: string; stage: string; percent: number; message: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, p: any) => cb(p);
+      ipcRenderer.on('decomps:install-progress', handler);
+      return () => ipcRenderer.removeListener('decomps:install-progress', handler);
     },
   },
 
@@ -167,6 +190,17 @@ const api = {
     removeFolder: (folderId: string): Promise<boolean> =>
       ipcRenderer.invoke('cloud:remove-folder', folderId),
     openWebUI: (): Promise<boolean> => ipcRenderer.invoke('cloud:open-web-ui'),
+    pendingDevices: (): Promise<SyncthingPendingDevice[]> => ipcRenderer.invoke('cloud:pending-devices'),
+    acceptPendingDevice: (deviceId: string): Promise<boolean> =>
+      ipcRenderer.invoke('cloud:accept-pending-device', deviceId),
+    pendingFolders: (): Promise<SyncthingPendingFolder[]> => ipcRenderer.invoke('cloud:pending-folders'),
+    acceptPendingFolder: (folderId: string, folderLabel: string, localPath: string, deviceId: string): Promise<boolean> =>
+      ipcRenderer.invoke('cloud:accept-pending-folder', folderId, folderLabel, localPath, deviceId),
+    guessPath: (label: string): Promise<string | null> => ipcRenderer.invoke('cloud:guess-path', label),
+    emulatorDirs: (): Promise<{ id: string; name: string; saves: string | null }[]> =>
+      ipcRenderer.invoke('cloud:emulator-dirs'),
+    toggleFolderSync: (emuId: string, sync: boolean): Promise<boolean> =>
+      ipcRenderer.invoke('cloud:toggle-folder-sync', emuId, sync),
     onInstallProgress: (cb: (progress: { stage: string; percent: number; message: string }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, p: { stage: string; percent: number; message: string }) => cb(p);
       ipcRenderer.on('cloud:install-progress', handler);

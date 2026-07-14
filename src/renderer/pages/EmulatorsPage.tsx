@@ -1,41 +1,64 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import type { EmulatorState, InstallProgress } from '../../shared/types';
+import type { EmulatorState, InstallProgress, DecompState } from '../../shared/types';
 
-interface ProgressMap {
-  [emulatorId: string]: InstallProgress;
+interface DecompProgressMap {
+  [decompId: string]: { stage: string; percent: number; message: string; error?: string };
 }
 
 const isMacOS = navigator.userAgent.includes('Mac');
 
 export function EmulatorsPage() {
   const [states, setStates] = useState<EmulatorState[]>([]);
+  const [decompStates, setDecompStates] = useState<DecompState[]>([]);
+  const [betaFeatures, setBetaFeatures] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState<ProgressMap>({});
+  const [progress, setProgress] = useState<Record<string, InstallProgress>>({});
+  const [decompProgress, setDecompProgress] = useState<DecompProgressMap>({});
   const [actioning, setActioning] = useState<string | null>(null);
   const cleanups = useRef<(() => void)[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await window.omni.emulators.states();
-    setStates(result);
+    const [emuResult, decompResult, settings] = await Promise.all([
+      window.omni.emulators.states(),
+      window.omni.decomps.states(),
+      window.omni.settings.get(),
+    ]);
+    setStates(emuResult);
+    setDecompStates(decompResult);
+    setBetaFeatures(!!settings.betaFeatures);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     load();
 
-    const unsub = window.omni.emulators.onInstallProgress((p: InstallProgress) => {
+    const unsubEmu = window.omni.emulators.onInstallProgress((p: InstallProgress) => {
       setProgress((prev) => ({ ...prev, [p.emulatorId]: p }));
       if (p.stage === 'done' || p.stage === 'error') {
         setActioning(null);
       }
     });
-    cleanups.current.push(unsub);
+
+    const unsubDecomp = window.omni.decomps.onInstallProgress((p) => {
+      setDecompProgress((prev) => ({
+        ...prev,
+        [p.decompId]: { stage: p.stage, percent: p.percent, message: p.message, error: (p as any).error },
+      }));
+      if (p.stage === 'done' || p.stage === 'error') {
+        setActioning(null);
+        load();
+      }
+    });
+
+    cleanups.current.push(unsubEmu, unsubDecomp);
 
     return () => {
       cleanups.current.forEach((fn) => fn());
     };
   }, [load]);
+
+  // ── Emulator handlers ─────────────────────────────────────
 
   const handleInstall = async (id: string) => {
     setActioning(id);
@@ -101,20 +124,45 @@ export function EmulatorsPage() {
     await window.omni.emulators.openWebsite(id);
   };
 
+  // ── Decomp handlers ───────────────────────────────────────
+
+  const handleDecompInstall = async (id: string) => {
+    setActioning(id);
+    setDecompProgress((prev) => ({
+      ...prev,
+      [id]: { stage: 'downloading', percent: 0, message: 'Starting...' },
+    }));
+    await window.omni.decomps.install(id);
+    await load();
+  };
+
+  const handleDecompUninstall = async (id: string) => {
+    if (!confirm(`Uninstall this port and remove all its files?`)) return;
+    setActioning(id);
+    await window.omni.decomps.uninstall(id);
+    setActioning(null);
+    await load();
+  };
+
+  const handleDecompLaunch = async (id: string) => {
+    setActioning(id);
+    await window.omni.decomps.launch(id);
+    setActioning(null);
+  };
+
+  const handleDecompSelectRom = async (id: string) => {
+    const result = await window.omni.decomps.selectRom(id);
+    if (result.state) {
+      setDecompStates((prev) =>
+        prev.map((d) => (d.config.id === id ? result.state : d))
+      );
+    }
+  };
+
   const handleRefresh = () => load();
 
   if (loading) {
     return <div className="loading">Checking emulators...</div>;
-  }
-
-  if (states.length === 0) {
-    return (
-      <div className="empty-state">
-        <div className="empty-state-icon">🕹️</div>
-        <h3>No emulators configured</h3>
-        <p>Ready to install and configure emulators automatically.</p>
-      </div>
-    );
   }
 
   const currentProgress = (id: string) => progress[id];
@@ -126,14 +174,14 @@ export function EmulatorsPage() {
           {states.filter((s) => s.installed).length} installed
           {' · '}
           {states.filter((s) => s.configured).length} configured
-          {' · '}
-          {Object.keys(progress).length > 0 && ' Installing...'}
+          {Object.keys(progress).length > 0 && ' · Installing...'}
         </span>
         <button className="btn btn-secondary btn-sm" onClick={handleRefresh}>
           Refresh
         </button>
       </div>
 
+      {/* ── Emulators Grid ───────────────────────────────── */}
       <div className="card-grid">
         {states.map((state) => {
           const prog = currentProgress(state.config.id);
@@ -211,15 +259,7 @@ export function EmulatorsPage() {
               >
                 {!state.installed && state.config.supported && (
                   <>
-                    {state.config.id === 'esde' && isMacOS ? (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        disabled={isActioning}
-                        onClick={() => handleInstall(state.config.id)}
-                      >
-                        {isActioning ? 'Working...' : 'Install Manually'}
-                      </button>
-                    ) : state.config.id === 'neostation' && isMacOS ? (
+                    {(state.config.id === 'esde' || state.config.id === 'neostation') && isMacOS ? (
                       <button
                         className="btn btn-primary btn-sm"
                         disabled={isActioning}
@@ -310,6 +350,143 @@ export function EmulatorsPage() {
           );
         })}
       </div>
+
+      {/* ── Decompilations Section (Beta) ───────────────── */}
+      {betaFeatures && (<>
+      <div style={{ marginTop: 40 }}>
+        <div className="info-bar" style={{ marginBottom: 16 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600 }}>Decompilations <span className="badge-beta">Beta</span></h2>
+          <span className="text-sm text-muted">
+            Native PC ports built from reverse-engineered source code — bring your own ROM
+          </span>
+        </div>
+
+        <div className="card-grid">
+          {decompStates.map((decomp) => {
+            const dprog = decompProgress[decomp.config.id];
+            const isActioning = actioning === decomp.config.id;
+
+            return (
+              <div className="card" key={decomp.config.id}>
+                <div className="card-header">
+                  <h3>{decomp.config.name}</h3>
+                  <span
+                    className={`badge ${
+                      decomp.installed
+                        ? decomp.hasRom
+                          ? 'badge-installed'
+                          : 'badge-installed'
+                        : 'badge-missing'
+                    }`}
+                  >
+                    {decomp.installed
+                      ? decomp.hasRom
+                        ? 'Ready to Play'
+                        : 'Needs ROM'
+                      : 'Not installed'}
+                  </span>
+                </div>
+
+                <p>{decomp.config.description}</p>
+
+                <div style={{ marginTop: 8 }}>
+                  <span className="platform-tag">{decomp.config.platform}</span>
+                  {decomp.config.features.slice(0, 3).map((f) => (
+                    <span className="platform-tag" key={f} style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                      {f}
+                    </span>
+                  ))}
+                </div>
+
+                {decomp.version && (
+                  <p className="text-sm text-muted mt-2">Version: {decomp.version}</p>
+                )}
+
+                {dprog && (
+                  <div className="mt-2">
+                    <div className="progress-bar">
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${dprog.percent}%`,
+                          background: dprog.stage === 'error' ? 'var(--error)' : 'var(--accent)',
+                        }}
+                      />
+                    </div>
+                    <p className="text-sm text-muted mt-2">
+                      {dprog.stage === 'error'
+                        ? `Error: ${dprog.error || dprog.message}`
+                        : dprog.message}
+                    </p>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 6,
+                    alignItems: 'center',
+                  }}
+                >
+                  {!decomp.installed && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={isActioning}
+                      onClick={() => handleDecompInstall(decomp.config.id)}
+                    >
+                      {isActioning ? 'Working...' : 'Install'}
+                    </button>
+                  )}
+
+                  {decomp.installed && (
+                    <>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={isActioning}
+                        onClick={() => handleDecompLaunch(decomp.config.id)}
+                      >
+                        Launch
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        disabled={isActioning}
+                        onClick={() => handleDecompSelectRom(decomp.config.id)}
+                      >
+                        {decomp.hasRom ? 'Change ROM' : 'Select ROM'}
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        disabled={isActioning}
+                        onClick={() => handleDecompUninstall(decomp.config.id)}
+                      >
+                        Uninstall
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    className="btn-icon"
+                    title="View on GitHub"
+                    onClick={() => window.open(decomp.config.githubUrl, '_blank')}
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    ↗
+                  </button>
+                </div>
+
+                {decomp.installed && !decomp.hasRom && (
+                  <p className="text-sm mt-2" style={{ color: 'var(--warning)' }}>
+                    Supply a legal ROM dump to play. Click "Select ROM" above.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      </>)}
     </div>
   );
 }

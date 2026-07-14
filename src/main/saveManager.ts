@@ -307,3 +307,31 @@ export function getSaveDir(emuId: string): string | null {
   const paths = emulatorSaveDirs(emuId);
   return paths?.saves || null;
 }
+
+export { emulatorSaveDirs };
+
+export function guessSavePathFromLabel(label: string): string | null {
+  const lower = label.toLowerCase();
+  for (const emu of ['retroarch', 'dolphin', 'rpcs3', 'eden', 'pcsx2', 'duckstation', 'flycast', 'ppsspp']) {
+    if (lower.includes(emu)) return getSaveDir(emu);
+  }
+  return null;
+}
+
+const EMU_SAVE_META: { id: string; name: string }[] = [
+  { id: 'retroarch', name: 'RetroArch' },
+  { id: 'dolphin', name: 'Dolphin' },
+  { id: 'rpcs3', name: 'RPCS3' },
+  { id: 'eden', name: 'Eden' },
+  { id: 'pcsx2', name: 'PCSX2' },
+  { id: 'duckstation', name: 'DuckStation' },
+  { id: 'flycast', name: 'Flycast' },
+  { id: 'ppsspp', name: 'PPSSPP' },
+];
+
+export function getEmulatorSaveDirs() {
+  return EMU_SAVE_META.map(e => ({
+    ...e,
+    saves: getSaveDir(e.id),
+  })).filter(e => e.saves);
+}
