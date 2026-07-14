@@ -26,7 +26,7 @@ function downloadFile(url: string, dest: string, onProgress: (pct: number) => vo
     const doRequest = (currentUrl: string) => {
       const protocol = currentUrl.startsWith('https') ? httpsGet : httpGet;
       const opts: RequestOptions = {
-        headers: { 'User-Agent': 'OmniEmu/0.2.1' },
+        headers: { 'User-Agent': 'OmniEmu/0.3.1' },
         timeout: 30000,
       };
       protocol(currentUrl, opts, (response) => {
