@@ -1,4 +1,4 @@
-# OmniEmu v0.3.0 Release Notes
+# OmniEmu v0.3.1 Release Notes
 
 > All your games. One place.
 
