@@ -6,9 +6,10 @@ import { LibraryPage } from './pages/LibraryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ControllerPage } from './pages/ControllerPage';
 import { UtilitiesPage } from './pages/UtilitiesPage';
+import { SaveManagerPage } from './pages/SaveManagerPage';
 import { useGamepadNav } from './hooks/useGamepadNav';
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller' | 'utilities';
+type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'settings' | 'controller' | 'utilities';
 
 export function applyTheme(theme: string) {
   if (theme === 'system') {
@@ -36,6 +37,8 @@ export function App() {
         return <EmulatorsPage />;
       case 'library':
         return <LibraryPage />;
+      case 'saves':
+        return <SaveManagerPage />;
       case 'settings':
         return <SettingsPage />;
       case 'controller':

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 const DEBOUNCE_MS = 180;
-const LEGEND_TIMEOUT_MS = 4000;
+const LEGEND_TIMEOUT_MS = 8000;
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller' | 'utilities';
+type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'settings' | 'controller' | 'utilities';
 
-const pageOrder: Page[] = ['dashboard', 'emulators', 'library', 'controller', 'utilities', 'settings'];
+const pageOrder: Page[] = ['dashboard', 'emulators', 'library', 'saves', 'controller', 'utilities', 'settings'];
 
 export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Page) {
   const lastTime = useRef<Record<string, number>>({});
@@ -13,6 +13,7 @@ export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Pag
   const [showLegend, setShowLegend] = useState(false);
   const legendTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const currentPageRef = useRef(currentPage);
+  const lastPageRef = useRef(currentPage);
   currentPageRef.current = currentPage;
 
   const showLegendTemporarily = useCallback(() => {
@@ -26,6 +27,15 @@ export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Pag
     let lastConnected = false;
 
     const poll = () => {
+      try {
+        pollInner();
+      } catch {
+        // don't let errors kill the loop
+      }
+      raf = requestAnimationFrame(poll);
+    };
+
+    const pollInner = () => {
       const gamepads = navigator.getGamepads();
       const now = Date.now();
 
@@ -41,7 +51,7 @@ export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Pag
       }
 
       const gp = activePad;
-      if (!gp) { raf = requestAnimationFrame(poll); return; }
+      if (!gp) return;
 
       const debounced = (key: string): boolean => {
         if (now - (lastTime.current[key] || 0) < DEBOUNCE_MS) return false;
@@ -80,74 +90,92 @@ export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Pag
         return;
       }
 
-      // D-Pad navigation within page content
-      const focusable = getFocusableElements();
+      const focusable = getFocusableElements().filter(el => !el.closest('.topbar-nav'));
 
-      if (dpadDown && debounced('down')) {
-        const focused = document.activeElement as HTMLElement;
-        const idx = focusable.indexOf(focused);
-        if (idx >= 0 && idx < focusable.length - 1) {
-          focusable[idx + 1].focus();
-          focusable[idx + 1].scrollIntoView({ block: 'nearest' });
-        } else if (focusable.length > 0) {
+      // When nothing meaningful is focused, auto-focus first element on any d-pad press
+      const active = document.activeElement as HTMLElement;
+      const isNothingFocused = !active || active === document.body || active === document.documentElement;
+
+      if (isNothingFocused && (dpadUp || dpadDown || dpadLeft || dpadRight)) {
+        if (focusable.length > 0) {
           focusable[0].focus();
           focusable[0].scrollIntoView({ block: 'nearest' });
+        }
+        return;
+      }
+
+      // If page just changed (LB/RB) and nothing is focused, auto-focus
+      if (lastPageRef.current !== currentPageRef.current) {
+        lastPageRef.current = currentPageRef.current;
+        if (isNothingFocused && focusable.length > 0) {
+          focusable[0].focus();
+          focusable[0].scrollIntoView({ block: 'nearest' });
+          return;
+        }
+      }
+
+      // Spatial d-pad navigation
+      if (dpadDown && debounced('down')) {
+        const next = spatialNav(focusable, active, 'down');
+        if (next) {
+          next.focus();
+          next.scrollIntoView({ block: 'nearest' });
         }
       }
 
       if (dpadUp && debounced('up')) {
-        const focused = document.activeElement as HTMLElement;
-        const idx = focusable.indexOf(focused);
-        if (idx > 0) {
-          focusable[idx - 1].focus();
-          focusable[idx - 1].scrollIntoView({ block: 'nearest' });
-        } else if (focusable.length > 0) {
-          focusable[focusable.length - 1].focus();
-          focusable[focusable.length - 1].scrollIntoView({ block: 'nearest' });
+        const next = spatialNav(focusable, active, 'up');
+        if (next) {
+          next.focus();
+          next.scrollIntoView({ block: 'nearest' });
         }
       }
 
-      // Left/Right for horizontal grid navigation
       if (dpadRight && debounced('right')) {
-        const focused = document.activeElement as HTMLElement;
-        if (focused) {
-          const next = findNextInRow(focused, 1);
-          if (next) {
-            next.focus();
-            next.scrollIntoView({ block: 'nearest' });
-          }
+        const next = spatialNav(focusable, active, 'right');
+        if (next) {
+          next.focus();
+          next.scrollIntoView({ block: 'nearest' });
         }
       }
 
       if (dpadLeft && debounced('left')) {
-        const focused = document.activeElement as HTMLElement;
-        if (focused) {
-          const prev = findNextInRow(focused, -1);
-          if (prev) {
-            prev.focus();
-            prev.scrollIntoView({ block: 'nearest' });
-          }
+        const next = spatialNav(focusable, active, 'left');
+        if (next) {
+          next.focus();
+          next.scrollIntoView({ block: 'nearest' });
         }
       }
 
       // A (0) → confirm / click
       if (gp.buttons[0]?.pressed && debounced('a')) {
         const el = document.activeElement as HTMLElement;
-        if (el) el.click();
+        if (el && el !== document.body) el.click();
       }
 
-      // B (1) → back / deselect
+      // B (1) → back / close modal / deselect
       if (gp.buttons[1]?.pressed && debounced('back')) {
+        // Check if a modal overlay is open — close it via Escape
+        const modal = document.querySelector('.modal-overlay');
+        if (modal) {
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+          return;
+        }
         const focused = document.activeElement as HTMLElement;
-        if (focused) focused.blur();
+        if (focused && focused !== document.body) focused.blur();
       }
-
-      raf = requestAnimationFrame(poll);
     };
 
     raf = requestAnimationFrame(poll);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+    };
   }, [onNavigate, showLegendTemporarily]);
+
+  // Track page changes
+  useEffect(() => {
+    lastPageRef.current = currentPage;
+  }, [currentPage]);
 
   return { connected, showLegend, dismissLegend: () => setShowLegend(false) };
 }
@@ -155,9 +183,13 @@ export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Pag
 function getFocusableElements(): HTMLElement[] {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
-      '.topbar-tab, button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), .game-card'
+      '.topbar-tab, button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), .game-card, [role="button"]'
     )
-  ).filter(el => el.offsetParent !== null);
+  ).filter(el => {
+    if (el.offsetParent === null && el.tagName !== 'BODY') return false;
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+    return true;
+  });
 }
 
 function focusFirstOnPage() {
@@ -170,29 +202,63 @@ function focusFirstOnPage() {
   });
 }
 
-function findNextInRow(current: HTMLElement, direction: 1 | -1): HTMLElement | null {
-  const focusable = getFocusableElements();
-  const idx = focusable.indexOf(current);
-  if (idx < 0) return null;
+type Direction = 'up' | 'down' | 'left' | 'right';
 
-  const currentRect = current.getBoundingClientRect();
-  const currentCenterY = currentRect.top + currentRect.height / 2;
+function spatialNav(elements: HTMLElement[], current: HTMLElement | null, dir: Direction): HTMLElement | null {
+  if (elements.length === 0) return null;
 
-  // Find elements on roughly the same row (within 50px vertically)
-  const sameRow = focusable.filter(el => {
-    if (el === current) return false;
-    const rect = el.getBoundingClientRect();
-    const centerY = rect.top + rect.height / 2;
-    return Math.abs(centerY - currentCenterY) < 50;
-  });
+  // Get the reference point
+  let refX: number;
+  let refY: number;
 
-  if (sameRow.length === 0) return null;
-
-  if (direction === 1) {
-    const right = sameRow.filter(el => el.getBoundingClientRect().left > currentRect.right - 10);
-    return right.length > 0 ? right[0] : null;
+  if (current && current !== document.body && current !== document.documentElement) {
+    const rect = current.getBoundingClientRect();
+    refX = rect.left + rect.width / 2;
+    refY = rect.top + rect.height / 2;
   } else {
-    const left = sameRow.filter(el => el.getBoundingClientRect().right < currentRect.left + 10);
-    return left.length > 0 ? left[left.length - 1] : null;
+    // No element focused — use viewport center
+    refX = window.innerWidth / 2;
+    refY = window.innerHeight / 2;
   }
+
+  const candidates: { el: HTMLElement; score: number }[] = [];
+
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i];
+    if (el === current) continue;
+
+    const r = el.getBoundingClientRect();
+    const ex = r.left + r.width / 2;
+    const ey = r.top + r.height / 2;
+    const dx = ex - refX;
+    const dy = ey - refY;
+
+    if (dir === 'down') {
+      if (dy > 5) {
+        candidates.push({ el, score: Math.abs(dy) + Math.abs(dx) * 1.5 });
+      }
+    } else if (dir === 'up') {
+      if (dy < -5) {
+        candidates.push({ el, score: Math.abs(dy) + Math.abs(dx) * 1.5 });
+      }
+    } else if (dir === 'right') {
+      if (dx > 5 && Math.abs(dy) < 100) {
+        candidates.push({ el, score: Math.abs(dx) + Math.abs(dy) * 2 });
+      }
+    } else if (dir === 'left') {
+      if (dx < -5 && Math.abs(dy) < 100) {
+        candidates.push({ el, score: Math.abs(dx) + Math.abs(dy) * 2 });
+      }
+    }
+  }
+
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => a.score - b.score);
+    return candidates[0].el;
+  }
+
+  // Wrap around
+  if (elements.length === 0) return null;
+  if (dir === 'down' || dir === 'right') return elements[0];
+  return elements[elements.length - 1];
 }

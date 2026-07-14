@@ -24,6 +24,7 @@ import { InstallProgress, AppSettings, GameEntry, AchievementInfo } from '../sha
 import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers, scrapeGameMetadata, searchSteamGridDB } from './scraper';
 import { getGameAchievements } from './ra';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
+import { listAllSaves, deleteSave, backupSave } from './saveManager';
 
 export function registerIpcHandlers(): void {
   // System
@@ -317,6 +318,37 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('updates:quit-and-install', async () => {
     quitAndInstall();
+    return true;
+  });
+
+  // Save Manager
+  ipcMain.handle('saves:list', () => listAllSaves());
+
+  ipcMain.handle('saves:delete', (_event, filePath: string) => deleteSave(filePath));
+
+  ipcMain.handle('saves:backup', (_event, filePath: string) => backupSave(filePath));
+
+  ipcMain.handle('saves:open-folder', async (_event, folderPath: string) => {
+    shell.showItemInFolder(folderPath);
+    return true;
+  });
+
+  ipcMain.handle('saves:select-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Select Save Directory',
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+      return result.filePaths[0];
+    }
+    return null;
+  });
+
+  ipcMain.handle('saves:set-directory', (_event, emulatorId: string, dir: string) => {
+    const s = settings.get();
+    const dirs = s.saveDirectories || {};
+    dirs[emulatorId] = dir;
+    settings.save({ saveDirectories: dirs });
     return true;
   });
 }

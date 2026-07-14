@@ -8,6 +8,7 @@ import type {
   AppSettings,
   InstallProgress,
   ConfigPreset,
+  EmulatorSaves,
 } from '../shared/types';
 
 declare global {
@@ -63,6 +64,14 @@ declare global {
       };
       utilities: {
         regenerateRomsStructure: () => Promise<boolean>;
+      };
+      saves: {
+        list: () => Promise<EmulatorSaves[]>;
+        delete: (filePath: string) => Promise<boolean>;
+        backup: (filePath: string) => Promise<string | null>;
+        openFolder: (folderPath: string) => Promise<boolean>;
+        selectDirectory: () => Promise<string | null>;
+        setDirectory: (emulatorId: string, dir: string) => Promise<boolean>;
       };
       retroachievements: {
         save: (username: string, password: string) => Promise<Record<string, boolean>>;

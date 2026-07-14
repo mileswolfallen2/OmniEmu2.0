@@ -117,6 +117,20 @@ const api = {
       ipcRenderer.invoke('utilities:regenerate-roms-structure'),
   },
 
+  saves: {
+    list: (): Promise<any[]> => ipcRenderer.invoke('saves:list'),
+    delete: (filePath: string): Promise<boolean> =>
+      ipcRenderer.invoke('saves:delete', filePath),
+    backup: (filePath: string): Promise<string | null> =>
+      ipcRenderer.invoke('saves:backup', filePath),
+    openFolder: (folderPath: string): Promise<boolean> =>
+      ipcRenderer.invoke('saves:open-folder', folderPath),
+    selectDirectory: (): Promise<string | null> =>
+      ipcRenderer.invoke('saves:select-directory'),
+    setDirectory: (emulatorId: string, dir: string): Promise<boolean> =>
+      ipcRenderer.invoke('saves:set-directory', emulatorId, dir),
+  },
+
   retroachievements: {
     save: (username: string, password: string): Promise<Record<string, boolean>> =>
       ipcRenderer.invoke('retroachievements:save', username, password),

@@ -1,6 +1,6 @@
 import React from 'react';
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller' | 'utilities';
+type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'settings' | 'controller' | 'utilities';
 
 interface TopBarProps {
   currentPage: Page;
@@ -11,6 +11,7 @@ const navItems: { page: Page; label: string; icon: string }[] = [
   { page: 'dashboard', label: 'Home', icon: '🏠' },
   { page: 'emulators', label: 'Emulators', icon: '🕹️' },
   { page: 'library', label: 'Library', icon: '📚' },
+  { page: 'saves', label: 'Saves', icon: '💾' },
   { page: 'controller', label: 'Controller', icon: '🎮' },
   { page: 'utilities', label: 'Utilities', icon: '🔧' },
   { page: 'settings', label: 'Settings', icon: '⚙️' },
@@ -32,7 +33,7 @@ export function Sidebar({ currentPage, onNavigate }: TopBarProps) {
           </button>
         ))}
       </nav>
-      <div className="topbar-version">v0.1.3</div>
+      <div className="topbar-version">v0.2.0</div>
     </div>
   );
 }

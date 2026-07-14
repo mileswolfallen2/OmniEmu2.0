@@ -15,7 +15,7 @@ const raConsoleIds: Record<string, number> = {
   dreamcast: 27, arcade: 99,
 };
 
-const userAgent = 'OmniEmu/0.1.3';
+const userAgent = 'OmniEmu/0.2.0';
 
 function fetchText(url: string): Promise<string> {
   return new Promise((resolve, reject) => {

@@ -55,6 +55,12 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const launchRef = useCallback((node: HTMLButtonElement | null) => {
+    if (node) {
+      requestAnimationFrame(() => node.focus());
+    }
+  }, []);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="game-detail-modal" onClick={(e) => e.stopPropagation()}>
@@ -63,7 +69,7 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
             <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {game.title}
             </h2>
-            <span className="platform-tag">{platformLabels[game.platform] || game.platform.toUpperCase()}</span>
+            <span className="platform-tag-accent">{platformLabels[game.platform] || game.platform.toUpperCase()}</span>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>
             Close
@@ -194,6 +200,7 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
             </div>
 
             <button
+              ref={launchRef}
               className="btn btn-primary game-detail-launch"
               onClick={() => { onLaunch(game); onClose(); }}
             >

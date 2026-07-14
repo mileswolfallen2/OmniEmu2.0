@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { AppSettings, EmulatorConfig } from '../../shared/types';
+import type { AppSettings } from '../../shared/types';
 import { BiosCheckPanel } from '../components/BiosCheckPanel';
 import { ReleaseNotesModal } from '../components/ReleaseNotesModal';
 import { applyTheme } from '../App';
@@ -415,7 +415,7 @@ export function SettingsPage() {
       <div className="settings-section">
         <h3>About</h3>
         <p className="text-sm text-muted">
-          OmniEmu v{updateInfo?.version || '0.1.3'} · Cross-platform emulator manager
+          OmniEmu v{updateInfo?.version || '0.2.0'} · Cross-platform emulator manager
           <br />
           Built with Electron + React + TypeScript
         </p>

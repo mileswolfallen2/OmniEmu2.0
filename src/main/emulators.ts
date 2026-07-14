@@ -1,14 +1,15 @@
 import { execSync, exec, ChildProcess } from 'child_process';
-import { existsSync, mkdirSync, readdirSync, renameSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, readFileSync, rmSync, statSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import { app } from 'electron';
+import { homedir } from 'os';
 import {
   EmulatorConfig,
   EmulatorState,
   GameEntry,
   InstallProgress,
 } from '../shared/types';
-import { getPlatform, getArch, isWindows, isMacOS, isLinux } from './platform';
+import { getPlatform, getArch, isWindows, isMacOS } from './platform';
 import { settings } from './settings';
 import { applyCachedCovers } from './scraper';
 
@@ -289,10 +290,6 @@ export const knownEmulators: EmulatorConfig[] = [
           url: 'https://buildbot.libretro.com/stable/1.22.2/apple/osx/x86_64/RetroArch.dmg',
           format: 'dmg',
           arch: 'x64',
-        },
-        {
-          url: 'https://buildbot.libretro.com/stable/1.22.2/apple/osx/universal/RetroArch_cores.7z',
-          format: '7z',
         },
       ],
       linux: [
@@ -616,6 +613,164 @@ export const knownEmulators: EmulatorConfig[] = [
       linux: 'https://pegasus-frontend.org/download/',
     },
   },
+  {
+    id: 'cemu',
+    name: 'Cemu',
+    description: 'Wii U emulator',
+    platforms: ['wiiu'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Cemu\\Cemu.exe',
+      darwin: '/Applications/Cemu.app/Contents/MacOS/Cemu',
+      linux: '/usr/bin/cemu',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/cemu-project/Cemu/releases/download/v2.6/cemu-2.6-windows-x64.zip',
+          format: 'zip',
+          executablePath: 'Cemu.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/cemu-project/Cemu/releases/download/v2.6/cemu-2.6-macos-12-x64.dmg',
+          format: 'dmg',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/cemu-project/Cemu/releases/download/v2.6/Cemu-2.6-x86_64.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://cemu-project.github.io/',
+      darwin: 'https://cemu-project.github.io/',
+      linux: 'https://cemu-project.github.io/',
+    },
+  },
+  {
+    id: 'xemu',
+    name: 'xemu',
+    description: 'Original Xbox emulator',
+    platforms: ['xbox'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\xemu\\xemu.exe',
+      darwin: '/Applications/xemu.app/Contents/MacOS/xemu',
+      linux: '/usr/bin/xemu',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/xemu-project/xemu/releases/download/v0.8.136/xemu-0.8.136-windows-x86_64.zip',
+          format: 'zip',
+          executablePath: 'xemu.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/xemu-project/xemu/releases/download/v0.8.136/xemu-0.8.136-macos-universal.zip',
+          format: 'zip',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/xemu-project/xemu/releases/download/v0.8.136/xemu-0.8.136-x86_64.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://xemu.app/',
+      darwin: 'https://xemu.app/',
+      linux: 'https://xemu.app/',
+    },
+  },
+  {
+    id: 'vita3k',
+    name: 'Vita3K',
+    description: 'PlayStation Vita emulator',
+    platforms: ['psvita'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Vita3K\\Vita3K.exe',
+      darwin: '/Applications/Vita3K.app/Contents/MacOS/Vita3K',
+      linux: '/usr/bin/vita3k',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/Vita3K/Vita3K/releases/download/continuous/windows-latest.zip',
+          format: 'zip',
+          executablePath: 'Vita3K.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/Vita3K/Vita3K/releases/download/continuous/macos-arm64-latest.dmg',
+          format: 'dmg',
+          arch: 'arm64',
+        },
+        {
+          url: 'https://github.com/Vita3K/Vita3K/releases/download/continuous/macos-latest.dmg',
+          format: 'dmg',
+          arch: 'x64',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/Vita3K/Vita3K/releases/download/continuous/Vita3K-x86_64.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://vita3k.org/',
+      darwin: 'https://vita3k.org/',
+      linux: 'https://vita3k.org/',
+    },
+  },
+  {
+    id: 'azahar',
+    name: 'Azahar',
+    description: 'Nintendo 3DS emulator (formerly Lime3DS)',
+    platforms: ['3ds'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Azahar\\azahar.exe',
+      darwin: '/Applications/Azahar.app/Contents/MacOS/azahar',
+      linux: '/usr/bin/azahar',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/azahar-emu/azahar/releases/download/2125.1.3/azahar-windows-msys2-2125.1.3.zip',
+          format: 'zip',
+          executablePath: 'azahar.exe',
+        },
+      ],
+      darwin: [
+        {
+          url: 'https://github.com/azahar-emu/azahar/releases/download/2125.1.3/azahar-macos-universal-2125.1.3.zip',
+          format: 'zip',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/azahar-emu/azahar/releases/download/2125.1.3/azahar.AppImage',
+          format: 'appimage',
+        },
+      ],
+    },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://azahar-emu.org/',
+      darwin: 'https://azahar-emu.org/',
+      linux: 'https://azahar-emu.org/',
+    },
+  },
 ];
 
 export function findEmulator(id: string): EmulatorConfig | undefined {
@@ -644,14 +799,14 @@ function detectEmulatorPath(config: EmulatorConfig): string | undefined {
 }
 
 function alternativePaths(emulatorId: string): string[] {
-  const home = require('os').homedir();
+  const home = homedir();
   const userData = app.getPath('userData');
   const omniEmuDir = join(userData, 'emulators', emulatorId);
 
   // Check marker file first (written after a successful install)
   const markerFile = join(omniEmuDir, '.installed');
   try {
-    const markerPath = require('fs').readFileSync(markerFile, 'utf-8').trim();
+    const markerPath = readFileSync(markerFile, 'utf-8').trim();
     if (markerPath && existsSync(markerPath)) return [markerPath];
   } catch { /* no marker */ }
 
@@ -747,6 +902,34 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'melonDS'),
       join(omniEmuDir, 'melonDS.app', 'Contents', 'MacOS', 'melonDS'),
       join(home, 'Applications', 'melonDS.app', 'Contents', 'MacOS', 'melonDS'),
+    ],
+    cemu: [
+      join(omniEmuDir, 'Cemu.exe'),
+      join(omniEmuDir, 'Cemu'),
+      join(omniEmuDir, 'Cemu.app', 'Contents', 'MacOS', 'Cemu'),
+      join(home, 'Applications', 'Cemu.app', 'Contents', 'MacOS', 'Cemu'),
+      '/usr/local/bin/cemu',
+    ],
+    xemu: [
+      join(omniEmuDir, 'xemu.exe'),
+      join(omniEmuDir, 'xemu'),
+      join(omniEmuDir, 'xemu.app', 'Contents', 'MacOS', 'xemu'),
+      join(home, 'Applications', 'xemu.app', 'Contents', 'MacOS', 'xemu'),
+      '/usr/bin/xemu',
+    ],
+    vita3k: [
+      join(omniEmuDir, 'Vita3K.exe'),
+      join(omniEmuDir, 'Vita3K'),
+      join(omniEmuDir, 'Vita3K.app', 'Contents', 'MacOS', 'Vita3K'),
+      join(home, 'Applications', 'Vita3K.app', 'Contents', 'MacOS', 'Vita3K'),
+      '/usr/bin/vita3k',
+    ],
+    azahar: [
+      join(omniEmuDir, 'azahar.exe'),
+      join(omniEmuDir, 'azahar'),
+      join(omniEmuDir, 'Azahar.app', 'Contents', 'MacOS', 'azahar'),
+      join(home, 'Applications', 'Azahar.app', 'Contents', 'MacOS', 'azahar'),
+      '/usr/bin/azahar',
     ],
   };
   return common[emulatorId] || [join(omniEmuDir)];
@@ -871,7 +1054,7 @@ function findRetroArchCore(romPath: string): string | undefined {
   const candidates = corePreference[ext];
   if (!candidates) return undefined;
 
-  const home = require('os').homedir();
+  const home = homedir();
   const userData = app.getPath('userData');
   const coreDirs = [
     join(userData, 'emulators', 'retroarch', 'RetroArch.app', 'Contents', 'Resources', 'cores'),
@@ -933,10 +1116,10 @@ function launchArgs(emulatorId: string, romPath: string): string {
 const defaultRomsDir = () => join(require('os').homedir(), 'Documents', 'roms');
 
 const romsSubdirs = [
-  'nes', 'snes', 'n64', 'gb', 'gbc', 'gba', 'nds',
-  'ps1', 'ps2', 'ps3', 'psp', 'gc', 'wii', 'switch',
+  'nes', 'snes', 'n64', 'gb', 'gbc', 'gba', 'nds', '3ds',
+  'ps1', 'ps2', 'ps3', 'psp', 'psvita', 'gc', 'wii', 'wiiu', 'switch',
   'arcade', 'pce', 'sega-md', 'sega-saturn', 'sega-dc', 'dreamcast',
-  'other',
+  'xbox', 'other',
 ];
 
 export function ensureRomsStructure(romsDir?: string): void {
@@ -977,6 +1160,7 @@ export function scanRoms(directory: string): GameEntry[] {
     '.wbfs', '.wad', '.nsp', '.xci', '.pkg', '.chd',
     '.gcm', '.gcz', '.rvz', '.m3u', '.ps2', '.cso',
     '.rom', '.zip', '.7z', '.gdi', '.pbp', '.cdi',
+    '.rpx', '.rpl', '.xbe', '.vpk', '.3ds', '.3dsx', '.cia', '.cxi',
   ];
 
   const entries: GameEntry[] = [];
@@ -984,10 +1168,10 @@ export function scanRoms(directory: string): GameEntry[] {
 
   function scanDir(dir: string) {
     try {
-      const files = require('fs').readdirSync(dir);
+      const files = readdirSync(dir);
       for (const file of files) {
         const fullPath = join(dir, file);
-        const stat = require('fs').statSync(fullPath);
+        const stat = statSync(fullPath);
         if (stat.isDirectory()) {
           if (file.toLowerCase() === 'bios') continue;
           scanDir(fullPath);
@@ -1048,6 +1232,10 @@ const dirHints: Record<string, string> = {
   arcade: 'arcade', mame: 'arcade',
   'sega-md': 'sega-md', 'sega genesis': 'sega-md', genesis: 'sega-md', megadrive: 'sega-md', 'mega drive': 'sega-md',
   'sega-dc': 'dreamcast',
+  wiiu: 'wiiu', 'wii u': 'wiiu',
+  xbox: 'xbox', 'original xbox': 'xbox',
+  psvita: 'psvita', vita: 'psvita', 'ps vita': 'psvita',
+  '3ds': '3ds', 'nintendo 3ds': '3ds',
 };
 
 function guessPlatform(ext: string, dirPath?: string): string {
@@ -1070,6 +1258,10 @@ function guessPlatform(ext: string, dirPath?: string): string {
     '.gdi': 'dreamcast',
     '.cdi': 'dreamcast',
     '.pbp': 'psp',
+    '.rpx': 'wiiu', '.rpl': 'wiiu',
+    '.xbe': 'xbox',
+    '.vpk': 'psvita',
+    '.3ds': '3ds', '.3dsx': '3ds', '.cia': '3ds', '.cxi': '3ds',
   };
   return map[ext] || 'other';
 }
@@ -1081,11 +1273,11 @@ export function uninstallEmulator(id: string): boolean {
   let removed = false;
 
   if (existsSync(installDir)) {
-    require('fs').rmSync(installDir, { recursive: true, force: true });
+    rmSync(installDir, { recursive: true, force: true });
     removed = true;
   }
   if (existsSync(configMarker)) {
-    require('fs').rmSync(configMarker, { force: true });
+    rmSync(configMarker, { force: true });
   }
 
   return removed;
@@ -1101,8 +1293,18 @@ function guessEmulator(ext: string, platform?: string): string {
       pce: 'retroarch',
       nes: 'retroarch', snes: 'retroarch', n64: 'retroarch',
       gb: 'retroarch', gbc: 'retroarch', gba: 'retroarch',
-      nds: 'retroarch',
+      nds: 'melonds',
       dreamcast: 'flycast',
+      gc: 'dolphin', wii: 'dolphin',
+      wiiu: 'cemu',
+      xbox: 'xemu',
+      psvita: 'vita3k',
+      '3ds': 'azahar',
+      ps2: 'pcsx2',
+      ps3: 'rpcs3',
+      ps1: 'duckstation',
+      switch: 'eden',
+      arcade: 'mame',
     };
     const mapped = platformMap[platform];
     if (mapped) return mapped;
@@ -1123,6 +1325,10 @@ function guessEmulator(ext: string, platform?: string): string {
     '.gdi': 'flycast',
     '.cdi': 'flycast',
     '.pbp': 'ppsspp',
+    '.rpx': 'cemu', '.rpl': 'cemu',
+    '.xbe': 'xemu',
+    '.vpk': 'vita3k',
+    '.3ds': 'azahar', '.3dsx': 'azahar', '.cia': 'azahar', '.cxi': 'azahar',
   };
   return map[ext] || 'retroarch';
 }

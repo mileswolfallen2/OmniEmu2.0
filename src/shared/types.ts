@@ -121,6 +121,8 @@ export interface AppSettings {
   betaFeatures?: boolean;
   /** SteamGridDB API key (free account at steamgriddb.com) */
   steamGridDbApiKey?: string;
+  /** Custom save directories per emulator: emulatorId -> save directory path */
+  saveDirectories?: Record<string, string>;
 }
 
 export interface RetroAchievement {
@@ -167,4 +169,23 @@ export interface UpdateInfo {
   assetUrl?: string;
   assetSize?: number;
   releaseNotes?: string;
+}
+
+export interface SaveEntry {
+  id: string;
+  emulatorId: string;
+  gameName: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  lastModified: string;
+  type: 'save' | 'state';
+}
+
+export interface EmulatorSaves {
+  emulatorId: string;
+  emulatorName: string;
+  saveDir: string;
+  stateDir?: string;
+  saves: SaveEntry[];
 }
