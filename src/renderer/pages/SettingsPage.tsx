@@ -220,6 +220,10 @@ export function SettingsPage() {
             <option value="dark">Dark</option>
             <option value="light">Light</option>
             <option value="system">System</option>
+            <option value="midnight">Midnight</option>
+            <option value="ember">Ember</option>
+            <option value="lavender">Lavender</option>
+            <option value="jade">Jade</option>
           </select>
         </div>
       </div>

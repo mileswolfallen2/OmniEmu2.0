@@ -42,6 +42,7 @@ declare global {
         clearRecent: () => Promise<boolean>;
         scrapeArt: (title: string, platform: string) => Promise<string | undefined>;
         cacheCovers: (entries: { romPath: string; coverUrl: string }[]) => Promise<boolean>;
+        searchCoverSGDB: (title: string, platform: string) => Promise<any[]>;
         scrapeMetadata: (romPath: string, title: string, platform: string) => Promise<GameMetadata>;
         achievements: (romPath: string, title: string, platform: string) => Promise<AchievementInfo | null>;
       };

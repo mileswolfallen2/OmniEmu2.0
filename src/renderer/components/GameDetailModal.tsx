@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import type { GameEntry, GameMetadata, AchievementInfo, RetroAchievement } from '../../shared/types';
+import { CoverPickerModal } from './CoverPickerModal';
 
 interface Props {
   game: GameEntry;
@@ -25,6 +26,7 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
   const [achievements, setAchievements] = useState<AchievementInfo | null>(null);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [currentScreenshot, setCurrentScreenshot] = useState(0);
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
 
   useEffect(() => {
     setLoadingMeta(true);
@@ -98,6 +100,25 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
 
           <div className="game-detail-right">
             <div className="game-detail-right-scroll">
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignSelf: 'flex-start' }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowCoverPicker(true)}
+                >
+                  Change Cover
+                </button>
+                {game.coverUrl && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={async () => {
+                      game.coverUrl = undefined;
+                      await window.omni.game.cacheCovers([{ romPath: game.romPath, coverUrl: '' }]);
+                    }}
+                  >
+                    Reset Cover
+                  </button>
+                )}
+              </div>
               {loadingMeta ? (
                 <div className="text-sm text-muted" style={{ padding: 12 }}>Loading metadata...</div>
               ) : (
@@ -181,6 +202,19 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
           </div>
         </div>
       </div>
+
+      {showCoverPicker && (
+        <CoverPickerModal
+          gameTitle={game.title}
+          platform={game.platform}
+          onSelect={async (url) => {
+            game.coverUrl = url;
+            await window.omni.game.cacheCovers([{ romPath: game.romPath, coverUrl: url }]);
+            setShowCoverPicker(false);
+          }}
+          onClose={() => setShowCoverPicker(false)}
+        />
+      )}
     </div>
   );
 }

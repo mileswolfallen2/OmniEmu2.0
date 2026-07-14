@@ -7,12 +7,15 @@ export function UtilitiesPage() {
   const [raApiKey, setRaApiKey] = useState('');
   const [raResults, setRaResults] = useState<Record<string, boolean> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sgdbKey, setSgdbKey] = useState('');
+  const [sgdbSaved, setSgdbSaved] = useState(false);
 
   useEffect(() => {
     window.omni.settings.get().then((s) => {
       setRaUsername(s.retroAchievementsUsername || '');
       setRaPassword(s.retroAchievementsPassword || '');
       setRaApiKey(s.retroAchievementsApiKey || '');
+      setSgdbKey(s.steamGridDbApiKey || '');
     });
   }, []);
 
@@ -155,6 +158,43 @@ export function UtilitiesPage() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>SteamGridDB Cover Art</h3>
+        <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
+          Search and pick cover art from SteamGridDB. Get a free API key at{' '}
+          <a href="https://www.steamgriddb.com/profile/preferences" target="_blank" rel="noreferrer">
+            steamgriddb.com/profile/preferences
+          </a>.
+        </p>
+
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">API Key</div>
+          </div>
+          <input
+            type="password"
+            className="input"
+            value={sgdbKey}
+            onChange={(e) => { setSgdbKey(e.target.value); setSgdbSaved(false); }}
+            placeholder="your SteamGridDB API key"
+            style={{ width: 240 }}
+          />
+        </div>
+
+        <div className="setting-row">
+          <div />
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={async () => {
+              await window.omni.settings.save({ steamGridDbApiKey: sgdbKey });
+              setSgdbSaved(true);
+            }}
+          >
+            {sgdbSaved ? 'Saved!' : 'Save'}
+          </button>
         </div>
       </div>
     </div>

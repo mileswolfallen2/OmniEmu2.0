@@ -2,13 +2,13 @@ import React from 'react';
 
 type Page = 'dashboard' | 'emulators' | 'library' | 'settings' | 'controller' | 'utilities';
 
-interface SidebarProps {
+interface TopBarProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
 }
 
 const navItems: { page: Page; label: string; icon: string }[] = [
-  { page: 'dashboard', label: 'Dashboard', icon: '📊' },
+  { page: 'dashboard', label: 'Home', icon: '🏠' },
   { page: 'emulators', label: 'Emulators', icon: '🕹️' },
   { page: 'library', label: 'Library', icon: '📚' },
   { page: 'controller', label: 'Controller', icon: '🎮' },
@@ -16,28 +16,23 @@ const navItems: { page: Page; label: string; icon: string }[] = [
   { page: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
-export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate }: TopBarProps) {
   return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <h1>OmniEmu</h1>
-        <p>Cross-platform emulator manager</p>
-      </div>
-      <nav className="sidebar-nav">
+    <div className="topbar-nav">
+      <div className="topbar-brand">OmniEmu</div>
+      <nav className="topbar-tabs">
         {navItems.map((item) => (
           <button
             key={item.page}
-            className={`nav-item ${currentPage === item.page ? 'active' : ''}`}
+            className={`topbar-tab ${currentPage === item.page ? 'active' : ''}`}
             onClick={() => onNavigate(item.page)}
           >
-            <span className="nav-icon">{item.icon}</span>
-            {item.label}
+            <span className="topbar-tab-icon">{item.icon}</span>
+            <span className="topbar-tab-label">{item.label}</span>
           </button>
         ))}
       </nav>
-      <div className="sidebar-footer">
-        v0.1.3
-      </div>
+      <div className="topbar-version">v0.1.3</div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
 import { checkForUpdates, downloadUpdate, quitAndInstall } from './updater';
 import { InstallProgress, AppSettings, GameEntry, AchievementInfo } from '../shared/types';
-import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers, scrapeGameMetadata } from './scraper';
+import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers, scrapeGameMetadata, searchSteamGridDB } from './scraper';
 import { getGameAchievements } from './ra';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
 
@@ -222,6 +222,13 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('games:cache-covers', (_event, entries: { romPath: string; coverUrl: string }[]) => {
     cacheCovers(entries);
     return true;
+  });
+
+  // Search SteamGridDB for cover art options
+  ipcMain.handle('games:search-cover-sgdb', async (_event, title: string, platform: string) => {
+    const s = settings.get();
+    if (!s.steamGridDbApiKey) return [];
+    return searchSteamGridDB(buildScrapeTitle(title), platform, s.steamGridDbApiKey);
   });
 
   // Scrape game metadata (description, year, genre, publisher, screenshots)

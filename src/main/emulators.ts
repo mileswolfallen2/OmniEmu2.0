@@ -989,6 +989,7 @@ export function scanRoms(directory: string): GameEntry[] {
         const fullPath = join(dir, file);
         const stat = require('fs').statSync(fullPath);
         if (stat.isDirectory()) {
+          if (file.toLowerCase() === 'bios') continue;
           scanDir(fullPath);
         } else {
           const ext = extname(file).toLowerCase();

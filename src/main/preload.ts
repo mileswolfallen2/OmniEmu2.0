@@ -81,6 +81,8 @@ const api = {
       ipcRenderer.invoke('games:scrape-art', title, platform),
     cacheCovers: (entries: { romPath: string; coverUrl: string }[]): Promise<boolean> =>
       ipcRenderer.invoke('games:cache-covers', entries),
+    searchCoverSGDB: (title: string, platform: string): Promise<any[]> =>
+      ipcRenderer.invoke('games:search-cover-sgdb', title, platform),
     scrapeMetadata: (romPath: string, title: string, platform: string): Promise<GameMetadata> =>
       ipcRenderer.invoke('games:scrape-metadata', romPath, title, platform),
     achievements: (romPath: string, title: string, platform: string): Promise<AchievementInfo | null> =>

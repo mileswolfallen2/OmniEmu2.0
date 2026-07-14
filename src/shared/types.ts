@@ -99,7 +99,7 @@ export interface ScanResult {
 export interface AppSettings {
   romsDirectory: string;
   emulatorsDirectory: string;
-  theme: 'light' | 'dark' | 'system';
+  theme: 'light' | 'dark' | 'system' | 'midnight' | 'ember' | 'lavender' | 'jade';
   minimiseToTray: boolean;
   launchInFullscreen: boolean;
   closeToTray: boolean;
@@ -119,6 +119,8 @@ export interface AppSettings {
   retroAchievementsApiKey?: string;
   /** Enable experimental/beta features (ES-DE, NeoStation, etc.) */
   betaFeatures?: boolean;
+  /** SteamGridDB API key (free account at steamgriddb.com) */
+  steamGridDbApiKey?: string;
 }
 
 export interface RetroAchievement {

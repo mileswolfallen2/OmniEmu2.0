@@ -45,22 +45,10 @@ export function App() {
     }
   };
 
-  const pageTitle: Record<Page, string> = {
-    dashboard: 'Dashboard',
-    emulators: 'Emulators',
-    library: 'Library',
-    settings: 'Settings',
-    controller: 'Controller',
-    utilities: 'Utilities',
-  };
-
   return (
     <div className="app-layout">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       <div className="main-content">
-        <div className="topbar">
-          <h2>{pageTitle[currentPage]}</h2>
-        </div>
         <div className="page-content">
           {renderPage()}
         </div>
@@ -68,17 +56,15 @@ export function App() {
 
       {connected && showLegend && (
         <div className="controller-legend" onClick={dismissLegend}>
-          <span>DPad: Navigate</span>
+          <span>D-Pad: Navigate</span>
           <span className="sep">|</span>
           <span>A: Select</span>
           <span className="sep">|</span>
-          <span>B/X/Select: Back</span>
+          <span>B: Back</span>
           <span className="sep">|</span>
-          <span>LB/RB: Tabs</span>
+          <span>LB/RB: Switch Tabs</span>
           <span className="sep">|</span>
-          <span>Start: Focus</span>
-          <span className="sep">|</span>
-          <span>Guide: Dashboard</span>
+          <span>Start: Focus Content</span>
         </div>
       )}
     </div>

@@ -177,11 +177,15 @@ export function getCachedCover(romPath: string): string | undefined {
   return readCache()[romPath];
 }
 
-/** Save cover URLs to cache */
+/** Save cover URLs to cache (empty string removes the entry) */
 export function cacheCovers(entries: { romPath: string; coverUrl: string }[]): void {
   const cache = readCache();
   for (const e of entries) {
-    if (e.coverUrl) cache[e.romPath] = e.coverUrl;
+    if (e.coverUrl) {
+      cache[e.romPath] = e.coverUrl;
+    } else {
+      delete cache[e.romPath];
+    }
   }
   writeCache(cache);
 }
@@ -388,4 +392,167 @@ export async function scrapeGameMetadata(romPath: string, title: string, platfor
   // Cache and return
   cacheMetadata(romPath, result);
   return result;
+}
+
+// ---- SteamGridDB cover art search ----
+
+export interface SGDBSearchResult {
+  id: number;
+  name: string;
+  url: string;
+  width: number;
+  height: number;
+  thumb: string;
+}
+
+/** Platform ID mapping for SteamGridDB */
+const sgdbPlatformMap: Record<string, number> = {
+  nes: 3, snes: 4, n64: 6, gb: 9, gbc: 10, gba: 11, nds: 13,
+  ps1: 28, ps2: 29, ps3: 30, psp: 31,
+  gc: 17, wii: 18, switch: 146,
+  'sega-md': 29, 'sega-saturn': 29, dreamcast: 17,
+  arcade: 52, pce: 15,
+};
+
+function sgdbFetch(url: string, apiKey: string, retries = 2): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const req = httpsGet(url, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'User-Agent': 'OmniEmu/0.1.3',
+      },
+      timeout: 10000,
+    }, (res) => {
+      let data = '';
+      res.on('data', (chunk: string) => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 429 && retries > 0) {
+          const retryAfter = parseInt(res.headers['retry-after'] as string) || 5;
+          setTimeout(() => {
+            sgdbFetch(url, apiKey, retries - 1).then(resolve, reject);
+          }, retryAfter * 1000);
+          return;
+        }
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`SGDB ${res.statusCode}: ${data}`));
+        } else {
+          resolve(data);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+function sgdbDownloadBuffer(url: string, apiKey: string, retries = 2): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const req = httpsGet(url, {
+      headers: {
+        'User-Agent': 'OmniEmu/0.1.3',
+      },
+      timeout: 15000,
+    }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk: Buffer) => chunks.push(chunk));
+      res.on('end', () => {
+        if (res.statusCode === 429 && retries > 0) {
+          const retryAfter = parseInt(res.headers['retry-after'] as string) || 5;
+          setTimeout(() => {
+            sgdbDownloadBuffer(url, apiKey, retries - 1).then(resolve, reject);
+          }, retryAfter * 1000);
+          return;
+        }
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`SGDB download ${res.statusCode}`));
+        } else {
+          resolve(Buffer.concat(chunks));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+function sgdbCacheDir(): string {
+  const dir = join(app.getPath('userData'), 'cache', 'sgdb');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+/** Download a remote image to local cache, return file:// path */
+async function downloadToCache(remoteUrl: string, filename: string, apiKey: string): Promise<string> {
+  const buf = await sgdbDownloadBuffer(remoteUrl, apiKey);
+  const ext = remoteUrl.includes('.png') ? '.png' : remoteUrl.includes('.jpg') ? '.jpg' : '.webp';
+  const safeName = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const localPath = join(sgdbCacheDir(), `${safeName}${ext}`);
+  writeFileSync(localPath, buf);
+  return `file://${localPath}`;
+}
+
+/** Search SteamGridDB for cover art options — returns local file:// paths */
+export async function searchSteamGridDB(
+  title: string,
+  platform: string,
+  apiKey: string
+): Promise<SGDBSearchResult[]> {
+  if (!apiKey) return [];
+
+  const q = encodeURIComponent(title.trim());
+  const searchUrl = `https://www.steamgriddb.com/api/v2/search/autocomplete/${q}`;
+
+  try {
+    const html = await sgdbFetch(searchUrl, apiKey);
+    const parsed = JSON.parse(html);
+    if (!parsed.data || !Array.isArray(parsed.data) || parsed.data.length === 0) return [];
+
+    const game = parsed.data[0];
+    if (!game || !game.id) return [];
+
+    const artUrl = `https://www.steamgriddb.com/api/v2/grids/game/${game.id}?dimensions=600x900`;
+    const artHtml = await sgdbFetch(artUrl, apiKey);
+    const artParsed = JSON.parse(artHtml);
+    if (!artParsed.data || !Array.isArray(artParsed.data)) return [];
+
+    const results: SGDBSearchResult[] = [];
+    const items = artParsed.data.slice(0, 20);
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const remoteThumb = item.thumb || item.url || '';
+      if (!remoteThumb) continue;
+      try {
+        const localPath = await downloadToCache(remoteThumb, `sgdb_${game.id}_${item.id}`, apiKey);
+        results.push({
+          id: item.id,
+          name: item.name || 'Cover',
+          url: remoteThumb,
+          width: item.width || 0,
+          height: item.height || 0,
+          thumb: localPath,
+        });
+      } catch {
+        results.push({
+          id: item.id,
+          name: item.name || 'Cover',
+          url: remoteThumb,
+          width: item.width || 0,
+          height: item.height || 0,
+          thumb: '',
+        });
+      }
+      if (i < items.length - 1) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+    return results;
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    if (msg.includes('429')) {
+      console.error('SteamGridDB rate limited — try again in a minute');
+      throw new Error('Rate limited by SteamGridDB. Try again in a minute.');
+    }
+    console.error('SteamGridDB search failed:', e);
+    throw new Error(`SteamGridDB search failed: ${msg}`);
+  }
 }

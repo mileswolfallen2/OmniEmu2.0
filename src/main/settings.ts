@@ -31,6 +31,7 @@ const defaultSettings: AppSettings = {
   retroAchievementsUsername: '',
   retroAchievementsPassword: '',
   retroAchievementsApiKey: '',
+  steamGridDbApiKey: '',
 };
 
 let cached: AppSettings | null = null;
