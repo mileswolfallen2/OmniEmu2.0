@@ -1,6 +1,6 @@
 import React from 'react';
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'settings' | 'controller' | 'utilities';
+type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'cloud' | 'settings' | 'controller' | 'utilities';
 
 interface TopBarProps {
   currentPage: Page;
@@ -12,6 +12,7 @@ const navItems: { page: Page; label: string; icon: string }[] = [
   { page: 'emulators', label: 'Emulators', icon: '🕹️' },
   { page: 'library', label: 'Library', icon: '📚' },
   { page: 'saves', label: 'Saves', icon: '💾' },
+  { page: 'cloud', label: 'Cloud Sync', icon: '☁️' },
   { page: 'controller', label: 'Controller', icon: '🎮' },
   { page: 'utilities', label: 'Utilities', icon: '🔧' },
   { page: 'settings', label: 'Settings', icon: '⚙️' },

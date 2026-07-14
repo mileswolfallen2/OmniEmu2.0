@@ -9,6 +9,7 @@ import type {
   ConfigPreset,
   GameMetadata,
   AchievementInfo,
+  SyncthingStatus,
 } from '../shared/types';
 
 const api = {
@@ -149,6 +150,27 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, p: Record<string, unknown>) => cb(p);
       ipcRenderer.on('updates:download-progress', handler);
       return () => ipcRenderer.removeListener('updates:download-progress', handler);
+    },
+  },
+
+  cloud: {
+    status: (): Promise<SyncthingStatus> => ipcRenderer.invoke('cloud:status'),
+    install: (): Promise<boolean> => ipcRenderer.invoke('cloud:install'),
+    start: (): Promise<SyncthingStatus | null> => ipcRenderer.invoke('cloud:start'),
+    stop: (): Promise<SyncthingStatus> => ipcRenderer.invoke('cloud:stop'),
+    addDevice: (deviceId: string, name: string): Promise<boolean> =>
+      ipcRenderer.invoke('cloud:add-device', deviceId, name),
+    removeDevice: (deviceId: string): Promise<boolean> =>
+      ipcRenderer.invoke('cloud:remove-device', deviceId),
+    addFolder: (id: string, label: string, path: string, deviceIds: string[]): Promise<boolean> =>
+      ipcRenderer.invoke('cloud:add-folder', id, label, path, deviceIds),
+    removeFolder: (folderId: string): Promise<boolean> =>
+      ipcRenderer.invoke('cloud:remove-folder', folderId),
+    openWebUI: (): Promise<boolean> => ipcRenderer.invoke('cloud:open-web-ui'),
+    onInstallProgress: (cb: (progress: { stage: string; percent: number; message: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, p: { stage: string; percent: number; message: string }) => cb(p);
+      ipcRenderer.on('cloud:install-progress', handler);
+      return () => ipcRenderer.removeListener('cloud:install-progress', handler);
     },
   },
 };

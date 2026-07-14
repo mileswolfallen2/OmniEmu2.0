@@ -123,6 +123,10 @@ export interface AppSettings {
   steamGridDbApiKey?: string;
   /** Custom save directories per emulator: emulatorId -> save directory path */
   saveDirectories?: Record<string, string>;
+  /** Syncthing GUI port */
+  syncthingPort?: number;
+  /** Cloud sync enabled (Syncthing installed and configured) */
+  cloudSyncEnabled?: boolean;
 }
 
 export interface RetroAchievement {
@@ -188,4 +192,29 @@ export interface EmulatorSaves {
   saveDir: string;
   stateDir?: string;
   saves: SaveEntry[];
+}
+
+export interface SyncthingStatus {
+  installed: boolean;
+  running: boolean;
+  deviceId: string;
+  apiAddress: string;
+  apiKey: string;
+  version: string;
+  folders: SyncthingFolder[];
+  remoteDevices: SyncthingRemoteDevice[];
+}
+
+export interface SyncthingFolder {
+  id: string;
+  label: string;
+  path: string;
+  type: string;
+}
+
+export interface SyncthingRemoteDevice {
+  id: string;
+  name: string;
+  addresses: string[];
+  connected: boolean;
 }

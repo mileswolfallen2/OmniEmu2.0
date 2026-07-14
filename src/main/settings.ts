@@ -32,6 +32,7 @@ const defaultSettings: AppSettings = {
   retroAchievementsPassword: '',
   retroAchievementsApiKey: '',
   steamGridDbApiKey: '',
+  syncthingPort: 8384,
 };
 
 let cached: AppSettings | null = null;

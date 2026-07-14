@@ -7,6 +7,7 @@ import { isMacOS } from './platform';
 import { ensureRomsStructure } from './emulators';
 import { setupAutoUpdater } from './updater';
 import { generatePegasusCollectionsForRomDir } from './configurator';
+import { startSyncthing } from './syncthing';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -129,6 +130,14 @@ app.whenReady().then(() => {
     const s = settings.get();
     if (s.betaFeatures && s.romsDirectory) {
       generatePegasusCollectionsForRomDir(s.romsDirectory);
+    }
+  } catch { /* ignore */ }
+
+  // Auto-start Syncthing if cloud sync was previously enabled
+  try {
+    const s = settings.get();
+    if (s.cloudSyncEnabled) {
+      startSyncthing().catch(() => { /* ignore */ });
     }
   } catch { /* ignore */ }
 

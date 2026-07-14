@@ -3,9 +3,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 const DEBOUNCE_MS = 180;
 const LEGEND_TIMEOUT_MS = 8000;
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'settings' | 'controller' | 'utilities';
+type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'cloud' | 'settings' | 'controller' | 'utilities';
 
-const pageOrder: Page[] = ['dashboard', 'emulators', 'library', 'saves', 'controller', 'utilities', 'settings'];
+const pageOrder: Page[] = ['dashboard', 'emulators', 'library', 'saves', 'cloud', 'controller', 'utilities', 'settings'];
 
 export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Page) {
   const lastTime = useRef<Record<string, number>>({});

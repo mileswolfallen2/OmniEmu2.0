@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync, unlinkSync, copyFileSync, mkdirSync } from 'fs';
+import { existsSync, readdirSync, statSync, unlinkSync, copyFileSync, mkdirSync, readFileSync } from 'fs';
 import { join, extname, basename } from 'path';
 import { app } from 'electron';
 import { homedir } from 'os';
@@ -15,20 +15,102 @@ interface SaveDirConfig {
   states?: string;
 }
 
+function parseRetroarchConfig(cfgPath: string): Record<string, string> {
+  try {
+    if (!existsSync(cfgPath)) return {};
+    const content = readFileSync(cfgPath, 'utf-8');
+    const result: Record<string, string> = {};
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx < 0) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let val = trimmed.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      result[key] = val;
+    }
+    return result;
+  } catch { return {}; }
+}
+
+function resolveRetroarchSaveDirs(): SaveDirConfig {
+  const candidates: string[] = [];
+
+  if (platform === 'win32') {
+    candidates.push(join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'RetroArch'));
+  } else if (platform === 'darwin') {
+    candidates.push(join(home, 'Library', 'Application Support', 'RetroArch'));
+    candidates.push(join(home, 'Documents', 'RetroArch'));
+    candidates.push(join(home, 'Desktop', 'RetroArch'));
+  } else {
+    candidates.push(join(home, '.config', 'retroarch'));
+  }
+
+  const customDirs = settings.get().saveDirectories || {};
+  if (customDirs.retroarch) {
+    candidates.unshift(customDirs.retroarch);
+  }
+
+  for (const dir of candidates) {
+    const cfgPath = join(dir, 'retroarch.cfg');
+    if (existsSync(cfgPath)) {
+      const cfg = parseRetroarchConfig(cfgPath);
+      const saveDir = cfg['savefile_directory'];
+      const stateDir = cfg['savestate_directory'];
+
+      let saves: string;
+      let states: string | undefined;
+
+      if (saveDir && saveDir !== 'default') {
+        saves = saveDir.startsWith('/') ? saveDir : join(dir, saveDir);
+      } else {
+        saves = join(dir, 'saves');
+      }
+
+      if (stateDir && stateDir !== 'default') {
+        states = stateDir.startsWith('/') ? stateDir : join(dir, stateDir);
+      } else {
+        states = join(dir, 'states');
+      }
+
+      if (existsSync(saves) || existsSync(states || '')) {
+        return { saves, states };
+      }
+    }
+
+    const saves = join(dir, 'saves');
+    const states = join(dir, 'states');
+    if (existsSync(saves) || existsSync(states)) {
+      return { saves, states };
+    }
+  }
+
+  return {
+    saves: platform === 'win32'
+      ? join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'RetroArch', 'saves')
+      : platform === 'darwin'
+      ? join(home, 'Library', 'Application Support', 'RetroArch', 'saves')
+      : join(home, '.config', 'retroarch', 'saves'),
+    states: platform === 'win32'
+      ? join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'RetroArch', 'states')
+      : platform === 'darwin'
+      ? join(home, 'Library', 'Application Support', 'RetroArch', 'states')
+      : join(home, '.config', 'retroarch', 'states'),
+  };
+}
+
+let _retroarchDirs: SaveDirConfig | null = null;
+function getRetroarchSaveDirs(): SaveDirConfig {
+  if (!_retroarchDirs) _retroarchDirs = resolveRetroarchSaveDirs();
+  return _retroarchDirs;
+}
+
 function emulatorSaveDirs(emuId: string): SaveDirConfig | null {
   const configs: Record<string, SaveDirConfig> = {
-    retroarch: {
-      saves: platform === 'win32'
-        ? join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'RetroArch', 'saves')
-        : platform === 'darwin'
-        ? join(home, 'Library', 'Application Support', 'RetroArch', 'saves')
-        : join(home, '.config', 'retroarch', 'saves'),
-      states: platform === 'win32'
-        ? join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'RetroArch', 'states')
-        : platform === 'darwin'
-        ? join(home, 'Library', 'Application Support', 'RetroArch', 'states')
-        : join(home, '.config', 'retroarch', 'states'),
-    },
+    retroarch: getRetroarchSaveDirs(),
     dolphin: {
       saves: platform === 'win32'
         ? join(home, 'Documents', 'Dolphin Emulator', 'GC')
@@ -129,31 +211,38 @@ function gameNameFromSave(fileName: string): string {
   return name.trim() || fileName;
 }
 
-function scanDir(dir: string): SaveEntry[] {
+function scanDir(dir: string, maxDepth = 3): SaveEntry[] {
   if (!existsSync(dir)) return [];
   const entries: SaveEntry[] = [];
-  try {
-    const files = readdirSync(dir);
-    for (const file of files) {
-      const fullPath = join(dir, file);
-      try {
-        const st = statSync(fullPath);
-        if (!st.isFile()) continue;
-        const type = isSaveFile(file);
-        if (!type) continue;
-        entries.push({
-          id: fullPath,
-          emulatorId: '',
-          gameName: gameNameFromSave(file),
-          fileName: file,
-          filePath: fullPath,
-          fileSize: st.size,
-          lastModified: st.mtime.toISOString(),
-          type,
-        });
-      } catch { /* skip unreadable */ }
-    }
-  } catch { /* skip unreadable dir */ }
+  const scan = (d: string, depth: number) => {
+    if (depth > maxDepth) return;
+    try {
+      const files = readdirSync(d);
+      for (const file of files) {
+        const fullPath = join(d, file);
+        try {
+          const st = statSync(fullPath);
+          if (st.isDirectory()) {
+            scan(fullPath, depth + 1);
+            continue;
+          }
+          const type = isSaveFile(file);
+          if (!type) continue;
+          entries.push({
+            id: fullPath,
+            emulatorId: '',
+            gameName: gameNameFromSave(file),
+            fileName: file,
+            filePath: fullPath,
+            fileSize: st.size,
+            lastModified: st.mtime.toISOString(),
+            type,
+          });
+        } catch { /* skip unreadable */ }
+      }
+    } catch { /* skip unreadable dir */ }
+  };
+  scan(dir, 0);
   return entries;
 }
 

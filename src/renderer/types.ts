@@ -9,6 +9,7 @@ import type {
   InstallProgress,
   ConfigPreset,
   EmulatorSaves,
+  SyncthingStatus,
 } from '../shared/types';
 
 declare global {
@@ -82,6 +83,18 @@ declare global {
         quitAndInstall: () => Promise<boolean>;
         onStatus: (cb: (status: Record<string, unknown>) => void) => () => void;
         onDownloadProgress: (cb: (progress: Record<string, unknown>) => void) => () => void;
+      };
+      cloud: {
+        status: () => Promise<SyncthingStatus>;
+        install: () => Promise<boolean>;
+        start: () => Promise<SyncthingStatus | null>;
+        stop: () => Promise<SyncthingStatus>;
+        addDevice: (deviceId: string, name: string) => Promise<boolean>;
+        removeDevice: (deviceId: string) => Promise<boolean>;
+        addFolder: (id: string, label: string, path: string, deviceIds: string[]) => Promise<boolean>;
+        removeFolder: (folderId: string) => Promise<boolean>;
+        openWebUI: () => Promise<boolean>;
+        onInstallProgress: (cb: (progress: { stage: string; percent: number; message: string }) => void) => () => void;
       };
     };
   }

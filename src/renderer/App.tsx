@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Dashboard } from './pages/Dashboard';
 import { EmulatorsPage } from './pages/EmulatorsPage';
 import { LibraryPage } from './pages/LibraryPage';
@@ -7,9 +8,10 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ControllerPage } from './pages/ControllerPage';
 import { UtilitiesPage } from './pages/UtilitiesPage';
 import { SaveManagerPage } from './pages/SaveManagerPage';
+import { CloudSyncPage } from './pages/CloudSyncPage';
 import { useGamepadNav } from './hooks/useGamepadNav';
 
-type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'settings' | 'controller' | 'utilities';
+type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'cloud' | 'settings' | 'controller' | 'utilities';
 
 export function applyTheme(theme: string) {
   if (theme === 'system') {
@@ -39,6 +41,8 @@ export function App() {
         return <LibraryPage />;
       case 'saves':
         return <SaveManagerPage />;
+      case 'cloud':
+        return <ErrorBoundary><CloudSyncPage /></ErrorBoundary>;
       case 'settings':
         return <SettingsPage />;
       case 'controller':

@@ -25,6 +25,16 @@ import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, ca
 import { getGameAchievements } from './ra';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
 import { listAllSaves, deleteSave, backupSave } from './saveManager';
+import {
+  installSyncthing,
+  startSyncthing,
+  stopSyncthing,
+  getSyncthingStatus,
+  addRemoteDevice,
+  removeRemoteDevice,
+  addSharedFolder,
+  removeSharedFolder,
+} from './syncthing';
 
 export function registerIpcHandlers(): void {
   // System
@@ -350,5 +360,70 @@ export function registerIpcHandlers(): void {
     dirs[emulatorId] = dir;
     settings.save({ saveDirectories: dirs });
     return true;
+  });
+
+  // Cloud Sync (Syncthing)
+  ipcMain.handle('cloud:status', async () => {
+    try {
+      return await getSyncthingStatus();
+    } catch (err) {
+      console.error('cloud:status error:', err);
+      return { installed: false, running: false, deviceId: '', apiAddress: '', apiKey: '', version: '', folders: [], remoteDevices: [] };
+    }
+  });
+
+  ipcMain.handle('cloud:install', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const ok = await installSyncthing((stage, percent, message) => {
+      win?.webContents.send('cloud:install-progress', { stage, percent, message });
+    });
+    return ok;
+  });
+
+  ipcMain.handle('cloud:start', async () => {
+    try {
+      // Fire-and-forget: start the process, don't block IPC
+      startSyncthing().catch(err => console.error('cloud:start background error:', err));
+      // Give it a moment to see if it comes up quickly
+      await new Promise(r => setTimeout(r, 2000));
+      return await getSyncthingStatus();
+    } catch (err) {
+      console.error('cloud:start error:', err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('cloud:stop', async () => {
+    try {
+      await stopSyncthing();
+    } catch (err) {
+      console.error('cloud:stop error:', err);
+    }
+    return getSyncthingStatus();
+  });
+
+  ipcMain.handle('cloud:add-device', async (_event, deviceId: string, name: string) => {
+    return addRemoteDevice(deviceId, name);
+  });
+
+  ipcMain.handle('cloud:remove-device', async (_event, deviceId: string) => {
+    return removeRemoteDevice(deviceId);
+  });
+
+  ipcMain.handle('cloud:add-folder', async (_event, id: string, label: string, path: string, deviceIds: string[]) => {
+    return addSharedFolder(id, label, path, deviceIds);
+  });
+
+  ipcMain.handle('cloud:remove-folder', async (_event, folderId: string) => {
+    return removeSharedFolder(folderId);
+  });
+
+  ipcMain.handle('cloud:open-web-ui', async () => {
+    const status = await getSyncthingStatus();
+    if (status.running && status.apiAddress) {
+      shell.openExternal(status.apiAddress);
+      return true;
+    }
+    return false;
   });
 }
