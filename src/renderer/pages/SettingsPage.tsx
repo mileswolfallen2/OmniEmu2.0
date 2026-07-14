@@ -415,7 +415,7 @@ export function SettingsPage() {
       <div className="settings-section">
         <h3>About</h3>
         <p className="text-sm text-muted">
-          OmniEmu v{updateInfo?.version || '0.2.0'} · Cross-platform emulator manager
+          OmniEmu v{updateInfo?.version || '0.2.1'} · Cross-platform emulator manager
           <br />
           Built with Electron + React + TypeScript
         </p>
