@@ -120,7 +120,7 @@ export async function findValidThumbnail(title: string, platform: string): Promi
 
 function fetchText(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const req = httpsGet(url, { headers: { 'User-Agent': 'OmniEmu/0.3.1' }, timeout: 10000 }, (res) => {
+    const req = httpsGet(url, { headers: { 'User-Agent': 'OmniEmu/0.3.2' }, timeout: 10000 }, (res) => {
       let data = '';
       res.on('data', (chunk: string) => data += chunk);
       res.on('end', () => resolve(data));
@@ -134,7 +134,7 @@ function urlExists(url: string, maxRedirects = 5): Promise<boolean> {
   return new Promise((resolve) => {
     const req = httpsGet(url, {
       method: 'GET',
-      headers: { 'User-Agent': 'OmniEmu/0.3.1' },
+      headers: { 'User-Agent': 'OmniEmu/0.3.2' },
       timeout: 10000,
     }, (res) => {
       if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location && maxRedirects > 0) {
@@ -262,7 +262,7 @@ export function cacheMetadata(romPath: string, metadata: GameMetadata): void {
   writeMetadataCache(cache);
 }
 
-const mobygamesUA = 'Mozilla/5.0 (compatible; OmniEmu/0.3.1; +https://github.com/mileswolfallen2/OmniEmu2.0)';
+const mobygamesUA = 'Mozilla/5.0 (compatible; OmniEmu/0.3.2; +https://github.com/mileswolfallen2/OmniEmu2.0)';
 
 function mobyFetch(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -439,7 +439,7 @@ function sgdbFetch(url: string, apiKey: string, retries = 2): Promise<string> {
     const req = httpsGet(url, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'User-Agent': 'OmniEmu/0.3.1',
+        'User-Agent': 'OmniEmu/0.3.2',
       },
       timeout: 10000,
     }, (res) => {
@@ -469,7 +469,7 @@ function sgdbDownloadBuffer(url: string, apiKey: string, retries = 2): Promise<B
   return new Promise((resolve, reject) => {
     const req = httpsGet(url, {
       headers: {
-        'User-Agent': 'OmniEmu/0.3.1',
+        'User-Agent': 'OmniEmu/0.3.2',
       },
       timeout: 15000,
     }, (res) => {

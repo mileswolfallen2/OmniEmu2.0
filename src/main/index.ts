@@ -210,16 +210,8 @@ if (!gotLock) {
     // Auto-generate Pegasus collection files if Pegasus is configured
     try {
       const s = settings.get();
-      if (s.betaFeatures && s.romsDirectory) {
+      if (s.frontendSupport && s.romsDirectory) {
         generatePegasusCollectionsForRomDir(s.romsDirectory);
-      }
-    } catch { /* ignore */ }
-
-    // Auto-start Syncthing if cloud sync was previously enabled
-    try {
-      const s = settings.get();
-      if (s.cloudSyncEnabled) {
-        startSyncthing().catch(() => { /* ignore */ });
       }
     } catch { /* ignore */ }
 

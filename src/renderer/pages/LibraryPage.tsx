@@ -13,7 +13,7 @@ const platformIcons: Record<string, string> = {
 export function LibraryPage() {
   const [games, setGames] = useState<GameEntry[]>([]);
   const [decompGames, setDecompGames] = useState<DecompState[]>([]);
-  const [betaFeatures, setBetaFeatures] = useState(false);
+  const [decompProjects, setDecompProjects] = useState(false);
   const [loading, setLoading] = useState(false);
   const [romsDir, setRomsDir] = useState<string>('');
   const [selectedGame, setSelectedGame] = useState<GameEntry | null>(null);
@@ -21,7 +21,7 @@ export function LibraryPage() {
   useEffect(() => {
     (async () => {
       const settings = await window.omni.settings.get();
-      setBetaFeatures(!!settings.betaFeatures);
+      setDecompProjects(!!settings.decompProjects);
       if (settings.romsDirectory) {
         setRomsDir(settings.romsDirectory);
         setLoading(true);
@@ -170,7 +170,7 @@ export function LibraryPage() {
       )}
 
       {/* ── Installed Decomps as Games (Beta) ──────────────── */}
-      {betaFeatures && decompGames.length > 0 && (
+      {decompProjects && decompGames.length > 0 && (
         <div style={{ marginTop: 32 }}>
           <div className="info-bar">
             <span style={{ fontWeight: 600 }}>Decompilations <span className="badge-beta">Beta</span></span>

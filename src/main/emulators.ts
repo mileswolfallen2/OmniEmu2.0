@@ -1174,11 +1174,7 @@ export function checkEmulator(id: string): EmulatorState {
 }
 
 export function getAllEmulatorStates(): EmulatorState[] {
-  const s = settings.get();
-  const beta = !!s.betaFeatures;
-  return knownEmulators
-    .filter(e => (e.id === 'esde' || e.id === 'neostation' || e.id === 'pegasus') ? beta : true)
-    .map((e) => checkEmulator(e.id));
+  return knownEmulators.map((e) => checkEmulator(e.id));
 }
 
 export function launchEmulator(emulatorId: string): boolean {

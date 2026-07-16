@@ -1,6 +1,6 @@
 {
   "name": "omniemu2",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Cross-platform emulator manager, game launcher and ROM manager",
   "main": "dist/main/index.js",
   "scripts": {
@@ -31,7 +31,7 @@
     "@vitejs/plugin-react": "^4.4.0",
     "7zip-bin": "^5.2.0",
     "concurrently": "^9.1.0",
-    "electron": "^43.1.0",
+    "electron": "^43.2.0",
     "electron-builder": "^25.1.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0"
@@ -98,7 +98,7 @@
     }
   },
   "allowScripts": {
-    "electron@43.1.0": true,
+    "electron@43.2.0": true,
     "esbuild@0.25.12": true,
     "fsevents@2.3.3": true
   }

@@ -1402,3 +1402,225 @@ select:focus, input[type="text"]:focus {
   justify-content: flex-end;
   background: var(--bg-secondary);
 }
+
+/* ── Theme Swatch Grid ───────────────────────────── */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 200ms ease;
+  background: none;
+  font-family: inherit;
+}
+
+.theme-swatch:hover {
+  transform: translateY(-2px);
+}
+
+.theme-swatch.active {
+  transform: translateY(-2px);
+}
+
+.theme-swatch-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ── Page Tabs ───────────────────────────────────── */
+
+.page-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 20px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm, 6px);
+  padding: 3px;
+}
+
+.page-tab {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.page-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.page-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  font-weight: 600;
+}
+
+.page-tab-count {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 9px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  padding: 0 4px;
+}
+
+/* ── Clickable Settings Sections ─────────────────── */
+
+.clickable-section {
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.clickable-section:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+/* ── Settings Panel (modal) ──────────────────────── */
+
+.settings-panel {
+  width: 90vw;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.settings-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.settings-panel-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ── Theme Swatch (panel version) ────────────────── */
+
+.theme-swatch-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-swatch-preview-bar {
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+}
+
+.theme-swatch-preview-dots {
+  display: flex;
+  gap: 3px;
+  padding: 4px 8px 6px;
+}
+
+.theme-swatch-preview-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+}
+
+.theme-swatch-check {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Experimental Features Panel ─────────────────── */
+
+.experimental-features {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.experimental-feature {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary);
+  gap: 16px;
+}
+
+.experimental-feature:hover {
+  background: var(--bg-tertiary);
+}
+
+.experimental-feature-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.experimental-feature-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.experimental-feature-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.experimental-feature-detail {
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.experimental-feature-detail strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.experimental-feature-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--accent);
+  font-style: italic;
+}

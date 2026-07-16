@@ -33,6 +33,8 @@ export function SettingsPage() {
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
+  const [showExperimental, setShowExperimental] = useState(false);
 
   useEffect(() => {
     const unsubStatus = window.omni.updates.onStatus((s) => {
@@ -201,51 +203,25 @@ export function SettingsPage() {
         )}
       </div>
 
-      <div className="settings-section">
-        <h3>Appearance</h3>
-
-        <div className="setting-row">
+      <div className="settings-section clickable-section" onClick={() => setShowAppearance(true)}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div className="setting-label">Theme</div>
-            <div className="setting-desc">Application color scheme</div>
+            <h3>Appearance</h3>
+            <div className="setting-desc" style={{ marginTop: 4 }}>Theme: {settings.theme.charAt(0).toUpperCase() + settings.theme.slice(1)}</div>
           </div>
-          <select
-            value={settings.theme}
-            onChange={(e) => {
-              const t = e.target.value as AppSettings['theme'];
-              applyTheme(t);
-              update({ theme: t });
-            }}
-          >
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-            <option value="system">System</option>
-            <option value="midnight">Midnight</option>
-            <option value="ember">Ember</option>
-            <option value="lavender">Lavender</option>
-            <option value="jade">Jade</option>
-          </select>
+          <span style={{ color: 'var(--text-muted)', fontSize: 18 }}>&rsaquo;</span>
         </div>
       </div>
 
-      <div className="settings-section">
-        <h3>Experimental</h3>
-
-        <div className="setting-row">
+      <div className="settings-section clickable-section" onClick={() => setShowExperimental(true)}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div className="setting-label">Enable Beta Features</div>
-            <div className="setting-desc">
-              Unlocks experimental emulators, frontends, and decompilations (ES-DE, NeoStation, SoH, etc.)
+            <h3>Experimental</h3>
+            <div className="setting-desc" style={{ marginTop: 4 }}>
+              Beta emulators, decomp projects, and frontends
             </div>
           </div>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={!!settings.betaFeatures}
-              onChange={(e) => update({ betaFeatures: e.target.checked })}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <span style={{ color: 'var(--text-muted)', fontSize: 18 }}>&rsaquo;</span>
         </div>
       </div>
 
@@ -415,7 +391,7 @@ export function SettingsPage() {
       <div className="settings-section">
         <h3>About</h3>
         <p className="text-sm text-muted">
-          OmniEmu v{updateInfo?.version || '0.3.1'} · Cross-platform emulator manager
+          OmniEmu v{updateInfo?.version || '0.3.2'} · Cross-platform emulator manager
           <br />
           Built with Electron + React + TypeScript
         </p>
@@ -438,6 +414,165 @@ export function SettingsPage() {
           Wipe All Data
         </button>
       </div>
+
+      {/* ── Appearance Panel ─────────────────────────────── */}
+      {showAppearance && (
+        <div className="modal-overlay" onClick={() => setShowAppearance(false)}>
+          <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-panel-header">
+              <h2>Appearance</h2>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowAppearance(false)}>Close</button>
+            </div>
+            <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+              Select your preferred theme. Changes apply instantly.
+            </p>
+            <div className="theme-grid">
+              {([
+                { id: 'dark', name: 'Dark', accent: '#00d4ff', bg: '#0a0a18', secondary: '#ff0080', text: '#e8f4ff' },
+                { id: 'light', name: 'Light', accent: '#0099e5', bg: '#f0f4f8', secondary: '#e5007e', text: '#1a1a2e' },
+                { id: 'midnight', name: 'Midnight', accent: '#06b6d4', bg: '#050814', secondary: '#06b6d4', text: '#e0f0ff' },
+                { id: 'ember', name: 'Ember', accent: '#ff6b35', bg: '#120a08', secondary: '#ff356b', text: '#fff4e8' },
+                { id: 'lavender', name: 'Lavender', accent: '#b868ff', bg: '#0c0818', secondary: '#ff68b8', text: '#f4e8ff' },
+                { id: 'jade', name: 'Jade', accent: '#20d0a0', bg: '#08100c', secondary: '#d0a020', text: '#e8f8f0' },
+              ]).map((t) => (
+                <button
+                  key={t.id}
+                  className={`theme-swatch ${settings.theme === t.id ? 'active' : ''}`}
+                  onClick={() => {
+                    applyTheme(t.id as AppSettings['theme']);
+                    update({ theme: t.id as AppSettings['theme'] });
+                  }}
+                >
+                  <div
+                    className="theme-swatch-preview"
+                    style={{ background: t.bg, border: settings.theme === t.id ? `2px solid ${t.accent}` : '2px solid rgba(255,255,255,0.08)' }}
+                  >
+                    <div className="theme-swatch-preview-bar" style={{ background: t.secondary }}>
+                      <span style={{ color: t.text, fontSize: 10, fontWeight: 700 }}>OmniEmu</span>
+                    </div>
+                    <div style={{ padding: '6px 8px' }}>
+                      <div style={{ height: 6, width: '70%', background: t.accent, borderRadius: 3, marginBottom: 4 }} />
+                      <div style={{ height: 4, width: '50%', background: `${t.text}40`, borderRadius: 2 }} />
+                    </div>
+                    <div className="theme-swatch-preview-dots">
+                      <span style={{ background: t.accent }} />
+                      <span style={{ background: t.secondary }} />
+                      <span style={{ background: `${t.text}60` }} />
+                    </div>
+                  </div>
+                  <span className="theme-swatch-name" style={{ color: settings.theme === t.id ? t.accent : 'var(--text-secondary)' }}>
+                    {t.name}
+                  </span>
+                  {settings.theme === t.id && <span className="theme-swatch-check" style={{ color: t.accent }}>&#10003;</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Experimental Panel ───────────────────────────── */}
+      {showExperimental && (
+        <div className="modal-overlay" onClick={() => setShowExperimental(false)}>
+          <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-panel-header">
+              <h2>Experimental</h2>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowExperimental(false)}>Close</button>
+            </div>
+            <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+              Toggle individual beta features on or off. These features are under active development and may be unstable.
+            </p>
+
+            <div className="experimental-features">
+              <div className="experimental-feature">
+                <div className="experimental-feature-info">
+                  <div className="experimental-feature-label">Frontend Support</div>
+                  <div className="experimental-feature-desc">
+                    Launch alternative frontends directly from OmniEmu for a more console-like experience.
+                  </div>
+                </div>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.frontendSupport}
+                    onChange={(e) => update({ frontendSupport: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+              <div className="experimental-feature">
+                <div className="experimental-feature-info">
+                  <div className="experimental-feature-label">Beta Emulators</div>
+                  <div className="experimental-feature-desc">Unlocks additional experimental emulators beyond the stable set</div>
+                </div>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.betaFeatures}
+                    onChange={(e) => update({ betaFeatures: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+              <div className="experimental-feature">
+                <div className="experimental-feature-info">
+                  <div className="experimental-feature-label">Decomp Projects</div>
+                  <div className="experimental-feature-desc">Native PC ports from reverse-engineered source (Ship of Harkinian, SM64, and more)</div>
+                </div>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.decompProjects}
+                    onChange={(e) => update({ decompProjects: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+              <div className="experimental-feature">
+                <div className="experimental-feature-info">
+                  <div className="experimental-feature-label">Remote Presets</div>
+                  <div className="experimental-feature-desc">Fetch recommended config presets from a remote URL</div>
+                </div>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.remotePresets}
+                    onChange={(e) => update({ remotePresets: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+              <div className="experimental-feature">
+                <div className="experimental-feature-info">
+                  <div className="experimental-feature-label">Cloud Sync</div>
+                  <div className="experimental-feature-desc">Sync save files between devices via Syncthing</div>
+                </div>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.cloudSyncEnabled}
+                    onChange={async (e) => {
+                      const on = e.target.checked;
+                      if (on) {
+                        try { await window.omni.cloud.start(); } catch { /* retry on next launch */ }
+                      } else {
+                        try { await window.omni.cloud.stop(); } catch { /* best effort */ }
+                      }
+                      update({ cloudSyncEnabled: on });
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

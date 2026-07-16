@@ -119,6 +119,12 @@ export interface AppSettings {
   retroAchievementsApiKey?: string;
   /** Enable experimental/beta features (ES-DE, NeoStation, etc.) */
   betaFeatures?: boolean;
+  /** Enable Decomp Projects section (Ship of Harkinian, SM64, etc.) */
+  decompProjects?: boolean;
+  /** Enable frontend support (ES-DE, NeoStation, Pegasus, EmuBuddy) */
+  frontendSupport?: boolean;
+  /** Enable remote preset fetching */
+  remotePresets?: boolean;
   /** SteamGridDB API key (free account at steamgriddb.com) */
   steamGridDbApiKey?: string;
   /** Custom save directories per emulator: emulatorId -> save directory path */

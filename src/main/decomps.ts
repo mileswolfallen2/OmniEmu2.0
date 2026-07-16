@@ -427,7 +427,7 @@ export function checkDecomp(id: string): DecompState {
 
 export function getAllDecompStates(): DecompState[] {
   const s = settings.get();
-  if (!s.betaFeatures) return [];
+  if (!s.decompProjects) return [];
   return knownDecomps.map(d => checkDecomp(d.id));
 }
 

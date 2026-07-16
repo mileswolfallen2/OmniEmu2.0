@@ -61,11 +61,7 @@ export function registerIpcHandlers(): void {
   // Emulators
   ipcMain.handle('emulators:list', () => {
     const plat = getPlatform();
-    const s = settings.get();
-    const beta = !!s.betaFeatures;
     return knownEmulators.filter(e => {
-      // Gate beta emulators behind beta toggle
-      if ((e.id === 'esde' || e.id === 'neostation' || e.id === 'pegasus') && !beta) return false;
       const hasDownload = e.downloads?.[plat] && e.downloads[plat]!.length > 0;
       const hasPackage = !!e.packageNames?.[plat];
       return hasDownload || hasPackage;

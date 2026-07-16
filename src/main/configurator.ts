@@ -306,7 +306,7 @@ async function fetchRemotePresets(): Promise<Record<string, ConfigPreset[]> | nu
     const { get } = await import('https');
     const data = await new Promise<string>((resolve, reject) => {
       get(presetSourceUrl, {
-        headers: { 'User-Agent': 'OmniEmu/0.3.1' },
+        headers: { 'User-Agent': 'OmniEmu/0.3.2' },
         timeout: 10000,
       }, (res) => {
         if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
@@ -351,9 +351,12 @@ export function getBuiltInPresets(): Record<string, ConfigPreset[]> {
 }
 
 export async function getPresets(emulatorId: string): Promise<ConfigPreset[]> {
-  // Priority: remote > local file > built-in
-  const remote = await fetchRemotePresets();
-  if (remote && remote[emulatorId]) return remote[emulatorId];
+  // Priority: remote > local file > built-in (remote only if enabled)
+  const s = settings.get();
+  if (s.remotePresets) {
+    const remote = await fetchRemotePresets();
+    if (remote && remote[emulatorId]) return remote[emulatorId];
+  }
   const local = loadLocalPresets();
   if (local && local[emulatorId]) return local[emulatorId];
   return builtInPresets[emulatorId] || [];

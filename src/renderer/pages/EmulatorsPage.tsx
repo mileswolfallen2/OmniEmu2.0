@@ -7,14 +7,20 @@ interface DecompProgressMap {
 
 const isMacOS = navigator.userAgent.includes('Mac');
 
+const FRONTEND_IDS = new Set(['esde', 'neostation', 'pegasus']);
+const EMUBUDDY_ID = 'emubuddy';
+type TabId = 'all' | 'emulators' | 'frontends' | 'decomps';
+
 export function EmulatorsPage() {
   const [states, setStates] = useState<EmulatorState[]>([]);
   const [decompStates, setDecompStates] = useState<DecompState[]>([]);
   const [betaFeatures, setBetaFeatures] = useState(false);
+  const [decompProjects, setDecompProjects] = useState(false);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<Record<string, InstallProgress>>({});
   const [decompProgress, setDecompProgress] = useState<DecompProgressMap>({});
   const [actioning, setActioning] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>('all');
   const cleanups = useRef<(() => void)[]>([]);
 
   const load = useCallback(async () => {
@@ -27,6 +33,7 @@ export function EmulatorsPage() {
     setStates(emuResult);
     setDecompStates(decompResult);
     setBetaFeatures(!!settings.betaFeatures);
+    setDecompProjects(!!settings.decompProjects);
     setLoading(false);
   }, []);
 
@@ -167,13 +174,26 @@ export function EmulatorsPage() {
 
   const currentProgress = (id: string) => progress[id];
 
+  const emulators = states.filter((s) => s.config.id !== 'emubuddy' && !FRONTEND_IDS.has(s.config.id));
+  const frontends = states.filter((s) => FRONTEND_IDS.has(s.config.id) || s.config.id === 'emubuddy');
+  const installedCount = states.filter((s) => s.installed).length;
+  const configuredCount = states.filter((s) => s.configured).length;
+
+  const filteredStates = activeTab === 'emulators'
+    ? emulators
+    : activeTab === 'frontends'
+    ? frontends
+    : states;
+
+  const showDecomps = decompProjects && (activeTab === 'all' || activeTab === 'decomps');
+
   return (
     <div>
       <div className="info-bar">
         <span>
-          {states.filter((s) => s.installed).length} installed
+          {installedCount} installed
           {' · '}
-          {states.filter((s) => s.configured).length} configured
+          {configuredCount} configured
           {Object.keys(progress).length > 0 && ' · Installing...'}
         </span>
         <button className="btn btn-secondary btn-sm" onClick={handleRefresh}>
@@ -181,9 +201,43 @@ export function EmulatorsPage() {
         </button>
       </div>
 
+      {/* ── Tabs ─────────────────────────────────────────── */}
+      <div className="page-tabs">
+        <button
+          className={`page-tab ${activeTab === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveTab('all')}
+        >
+          All
+          <span className="page-tab-count">{states.length + (showDecomps ? decompStates.length : 0)}</span>
+        </button>
+        <button
+          className={`page-tab ${activeTab === 'emulators' ? 'active' : ''}`}
+          onClick={() => setActiveTab('emulators')}
+        >
+          Emulators
+          <span className="page-tab-count">{emulators.length}</span>
+        </button>
+        <button
+          className={`page-tab ${activeTab === 'frontends' ? 'active' : ''}`}
+          onClick={() => setActiveTab('frontends')}
+        >
+          Frontends
+          <span className="page-tab-count">{frontends.length}</span>
+        </button>
+        {decompProjects && (
+          <button
+            className={`page-tab ${activeTab === 'decomps' ? 'active' : ''}`}
+            onClick={() => setActiveTab('decomps')}
+          >
+            Decomps
+            <span className="page-tab-count">{decompStates.length}</span>
+          </button>
+        )}
+      </div>
+
       {/* ── Emulators Grid ───────────────────────────────── */}
       <div className="card-grid">
-        {states.map((state) => {
+        {filteredStates.map((state) => {
           const prog = currentProgress(state.config.id);
           const isActioning = actioning === state.config.id;
 
@@ -351,8 +405,8 @@ export function EmulatorsPage() {
         })}
       </div>
 
-      {/* ── Decompilations Section (Beta) ───────────────── */}
-      {betaFeatures && (<>
+      {/* ── Decompilations Section ───────────────────────── */}
+      {showDecomps && (<>
       <div style={{ marginTop: 40 }}>
         <div className="info-bar" style={{ marginBottom: 16 }}>
           <h2 style={{ fontSize: 20, fontWeight: 600 }}>Decompilations <span className="badge-beta">Beta</span></h2>
