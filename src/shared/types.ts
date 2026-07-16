@@ -127,6 +127,10 @@ export interface AppSettings {
   syncthingPort?: number;
   /** Cloud sync enabled (Syncthing installed and configured) */
   cloudSyncEnabled?: boolean;
+  /** Cloud sync initial setup completed (hides step counter on revisit) */
+  cloudSyncSetupComplete?: boolean;
+  /** First-time setup completed (hides the initial installer overlay) */
+  firstSetupComplete?: boolean;
 }
 
 export interface RetroAchievement {

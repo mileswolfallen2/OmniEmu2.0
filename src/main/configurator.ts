@@ -127,7 +127,6 @@ Pad1 = SDL
       description: 'Universal RetroArch config with optimal defaults',
       files: {
         'retroarch.cfg': `video_driver = "vulkan"
-audio_driver = "pulseaudio"
 video_fullscreen = true
 video_vsync = true
 video_scale_integer = false
@@ -153,7 +152,6 @@ nds_default_core = "melonds_libretro"
       description: 'Performance-focused RetroArch config',
       files: {
         'retroarch.cfg': `video_driver = "vulkan"
-audio_driver = "pulseaudio"
 video_fullscreen = true
 video_threaded = true
 video_vsync = false
@@ -277,6 +275,24 @@ volume = 100
       name: 'OmniEmu Recommended',
       description: 'Generates Pegasus collection files for all your ROMs with correct launch commands',
       files: {},
+    },
+  ],
+  mednafen: [
+    {
+      name: 'OmniEmu Recommended',
+      description: 'Optimal Mednafen config with hardware rendering and smooth scaling',
+      files: {
+        'mednafen.cfg': `video.driver "opengl"
+video.fullscreen "yes"
+video.vsync "yes"
+video.smooth "yes"
+video.scale_screen "full"
+video.blit_style "hardware"
+sound.driver "default"
+sound.enable "yes"
+cheevos.enable "yes"
+`,
+      },
     },
   ],
 };
@@ -405,8 +421,33 @@ function getConfigDir(emulatorId: string, installPath: string): string {
       darwin: join(require('os').homedir(), 'Library', 'Preferences', 'pegasus-frontend'),
       linux: join(require('os').homedir(), '.config', 'pegasus-frontend'),
     },
+    mednafen: {
+      win32: join(process.env.APPDATA || '', 'mednafen'),
+      darwin: join(require('os').homedir(), '.mednafen'),
+      linux: join(require('os').homedir(), '.mednafen'),
+    },
   };
-  return platformDirs[emulatorId]?.[platform] || dirname(installPath);
+  const defaultDir = platformDirs[emulatorId]?.[platform] || dirname(installPath);
+
+  // RetroArch on macOS: libretro nightlies may use ~/.config/retroarch instead of ~/Library/...
+  if (emulatorId === 'retroarch') return getRetroArchConfigDir();
+
+  return defaultDir;
+}
+
+/** Shared RetroArch config dir resolver — probes both candidate paths on macOS */
+export function getRetroArchConfigDir(): string {
+  const os = require('os');
+  if (platform === 'win32') return join(process.env.APPDATA || '', 'RetroArch');
+
+  const candidates = platform === 'darwin'
+    ? [join(os.homedir(), 'Library', 'Application Support', 'RetroArch'), join(os.homedir(), '.config', 'retroarch')]
+    : [join(os.homedir(), '.config', 'retroarch'), join(os.homedir(), 'Library', 'Application Support', 'RetroArch')];
+
+  for (const dir of candidates) {
+    if (existsSync(join(dir, 'retroarch.cfg'))) return dir;
+  }
+  return candidates[0];
 }
 
 export function checkConfigured(emulatorId: string, installPath?: string): boolean {
@@ -439,7 +480,28 @@ export async function applyPreset(
     if (!existsSync(parentDir)) {
       mkdirSync(parentDir, { recursive: true });
     }
-    writeFileSync(fullPath, content, 'utf-8');
+
+    // For RetroArch: read-modify-write to preserve user customizations
+    if (emulatorId === 'retroarch' && existsSync(fullPath)) {
+      const existing = readFileSync(fullPath, 'utf-8');
+      const existingLines = existing.split('\n');
+      const newKeys = Object.keys(preset.files[relativePath]
+        .split('\n')
+        .filter(l => l.trim() && !l.trim().startsWith('#'))
+        .reduce((acc, l) => { const k = l.split('=')[0]?.trim(); if (k) acc[k] = true; return acc; }, {} as Record<string, boolean>));
+      const filtered = existingLines.filter(l => {
+        const trimmed = l.trim();
+        if (!trimmed || trimmed.startsWith('#')) return true;
+        const key = trimmed.split('=')[0]?.trim();
+        return key ? !newKeys.includes(key) : true;
+      });
+      // Append new settings after existing content
+      const newSettings = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
+      filtered.push(...newSettings);
+      writeFileSync(fullPath, filtered.join('\n'), 'utf-8');
+    } else {
+      writeFileSync(fullPath, content, 'utf-8');
+    }
 
     done++;
     report(Math.round((done / totalFiles) * 100), `Wrote ${relativePath}`);
@@ -486,6 +548,7 @@ const esdeEmulatorNames: Record<string, string> = {
   melonds: 'MELONDS',
   flycast: 'FLYCAST',
   eden: 'EDEN',
+  mednafen: 'MEDNAFEN',
 };
 
 function getEsdeEmulatorName(emulatorId: string): string | undefined {
@@ -900,10 +963,10 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
         lines.push('input_player1_y_btn = "3"');
         lines.push(`input_player1_l_btn = "4"`);
         lines.push(`input_player1_r_btn = "5"`);
-        lines.push(`input_player1_l2_btn = "6"`);
-        lines.push(`input_player1_r2_btn = "7"`);
-        lines.push(`input_player1_select_btn = "6"`);
-        lines.push(`input_player1_start_btn = "7"`);
+        lines.push(`input_player1_select_btn = "8"`);
+        lines.push(`input_player1_start_btn = "9"`);
+        lines.push(`input_player1_l2_axis = "+4"`);
+        lines.push(`input_player1_r2_axis = "+5"`);
       }
 
       writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
@@ -1016,6 +1079,72 @@ export function applyControllerConfig(emulatorId: string, installPath: string, c
   return false;
 }
 
+/** Patch fullscreen setting for an emulator's config file */
+export function patchEmulatorFullscreen(emulatorId: string, installPath: string, fullscreen: boolean): void {
+  const configDir = getConfigDir(emulatorId, installPath);
+  if (!existsSync(configDir)) return;
+
+  const val = fullscreen ? 'true' : 'false';
+
+  switch (emulatorId) {
+    case 'retroarch': {
+      const cfgPath = join(configDir, 'retroarch.cfg');
+      if (!existsSync(cfgPath)) return;
+      const lines = readFileSync(cfgPath, 'utf-8').split('\n')
+        .filter(l => !l.startsWith('video_fullscreen'));
+      lines.push(`video_fullscreen = ${val}`);
+      writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
+      break;
+    }
+    case 'duckstation': {
+      const iniPath = join(configDir, 'settings.ini');
+      if (!existsSync(iniPath)) return;
+      const lines = readFileSync(iniPath, 'utf-8').split('\n')
+        .filter(l => !l.startsWith('StartFullscreen') && !l.startsWith('Fullscreen ='));
+      lines.push(`StartFullscreen = ${fullscreen ? 'True' : 'False'}`);
+      lines.push(`Fullscreen = ${fullscreen ? 'True' : 'False'}`);
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      break;
+    }
+    case 'flycast': {
+      const cfgPath = join(configDir, 'emu.cfg');
+      if (!existsSync(cfgPath)) return;
+      const lines = readFileSync(cfgPath, 'utf-8').split('\n')
+        .filter(l => !l.startsWith('fullscreen'));
+      lines.push(`fullscreen = ${fullscreen ? 'yes' : 'no'}`);
+      writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
+      break;
+    }
+    case 'melonds': {
+      const iniPath = join(configDir, 'melonDS.ini');
+      if (!existsSync(iniPath)) return;
+      const lines = readFileSync(iniPath, 'utf-8').split('\n')
+        .filter(l => !l.startsWith('fullscreen'));
+      lines.push(`fullscreen = ${fullscreen ? '1' : '0'}`);
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      break;
+    }
+    case 'pcsx2': {
+      const iniPath = join(configDir, 'inis', 'PCSX2.ini');
+      if (!existsSync(iniPath)) return;
+      const lines = readFileSync(iniPath, 'utf-8').split('\n')
+        .filter(l => !l.startsWith('StartFullscreen'));
+      lines.push(`StartFullscreen = ${fullscreen ? '1' : '0'}`);
+      writeFileSync(iniPath, lines.join('\n'), 'utf-8');
+      break;
+    }
+    case 'dolphin': {
+      const cfgPath = join(configDir, 'Config', 'Dolphin.ini');
+      if (!existsSync(cfgPath)) return;
+      const lines = readFileSync(cfgPath, 'utf-8').split('\n')
+        .filter(l => !l.startsWith('Fullscreen ='));
+      lines.push(`Fullscreen = ${fullscreen ? 'True' : 'False'}`);
+      writeFileSync(cfgPath, lines.join('\n'), 'utf-8');
+      break;
+    }
+  }
+}
+
 async function getRetroAchievementsToken(username: string, password: string): Promise<string | null> {
   try {
     const https = await import('https');
@@ -1095,6 +1224,12 @@ const raEmulatorConfigs: Record<string, {
     enabled: 'Enabled = 1',
     username: 'Username = %s',
     token: 'Password = %s',
+  },
+  mednafen: {
+    file: 'mednafen.cfg',
+    enabled: 'cheevos.enable "yes"',
+    username: 'cheevos.username "%s"',
+    token: 'cheevos.password "%s"',
   },
 };
 

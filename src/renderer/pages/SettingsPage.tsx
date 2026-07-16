@@ -420,6 +420,24 @@ export function SettingsPage() {
           Built with Electron + React + TypeScript
         </p>
       </div>
+
+      <div className="settings-section" style={{ borderColor: 'var(--error)' }}>
+        <h3 style={{ color: 'var(--error)' }}>Danger Zone</h3>
+        <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
+          Delete all installed emulators, downloaded data, Syncthing config, and reset settings to defaults. Your ROMs will not be affected.
+        </p>
+        <button
+          className="btn btn-danger"
+          onClick={async () => {
+            if (!confirm('This will delete all emulators, settings, and app data. Your ROMs are safe. Continue?')) return;
+            if (!confirm('Are you really sure? This cannot be undone.')) return;
+            await window.omni.app.nukeData();
+            window.location.reload();
+          }}
+        >
+          Wipe All Data
+        </button>
+      </div>
     </div>
   );
 }

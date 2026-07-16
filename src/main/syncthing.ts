@@ -360,12 +360,12 @@ export async function getSyncthingStatus(): Promise<SyncthingStatus> {
     }));
 
     const remoteDevices: SyncthingRemoteDevice[] = (config.devices || [])
-      .filter((d: any) => d.id && d.id !== status.myID)
+      .filter((d: any) => d.deviceID && d.deviceID !== status.myID)
       .map((d: any) => ({
-        id: d.id,
-        name: d.name || (d.id ? d.id.slice(0, 8) : 'Unknown'),
+        id: d.deviceID,
+        name: d.name || (d.deviceID ? d.deviceID.slice(0, 8) : 'Unknown'),
         addresses: d.addresses || [],
-        connected: !!status?.connections?.[d.id]?.connected,
+        connected: !!status?.connections?.[d.deviceID]?.connected,
       }));
 
     return {
@@ -534,3 +534,24 @@ export async function acceptPendingFolder(
 }
 
 export { getBinaryPath, getPort, getApiKey, apiUrl, getSyncthingDir };
+
+export async function uninstallSyncthing(): Promise<boolean> {
+  try {
+    if (stProcess && !stProcess.killed) {
+      try { await apiRequest('POST', '/rest/system/shutdown'); } catch { /* ignore */ }
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => { stProcess?.kill(); resolve(); }, 3000);
+        stProcess!.on('exit', () => { clearTimeout(timeout); resolve(); });
+      });
+      stProcess = null;
+    }
+    const dir = getSyncthingDir();
+    if (existsSync(dir)) {
+      const { rmSync } = await import('fs');
+      rmSync(dir, { recursive: true, force: true });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}

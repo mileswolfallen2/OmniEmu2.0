@@ -1,5 +1,5 @@
 import { get as httpsGet, request as httpsRequest } from 'https';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { app } from 'electron';
 import { GameEntry, GameMetadata } from '../shared/types';
@@ -130,16 +130,20 @@ function fetchText(url: string): Promise<string> {
   });
 }
 
-function urlExists(url: string): Promise<boolean> {
+function urlExists(url: string, maxRedirects = 5): Promise<boolean> {
   return new Promise((resolve) => {
     const req = httpsGet(url, {
       method: 'GET',
       headers: { 'User-Agent': 'OmniEmu/0.3.1' },
       timeout: 10000,
     }, (res) => {
-      // GitHub raw returns 200 for existing or redirects to it
-      resolve(res.statusCode === 200);
-      res.resume(); // drain response
+      if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location && maxRedirects > 0) {
+        res.resume();
+        resolve(urlExists(res.headers.location, maxRedirects - 1));
+        return;
+      }
+      resolve(!!res.statusCode && res.statusCode >= 200 && res.statusCode < 300);
+      res.resume();
     });
     req.on('error', () => resolve(false));
     req.on('timeout', () => { req.destroy(); resolve(false); });
@@ -188,6 +192,22 @@ export function cacheCovers(entries: { romPath: string; coverUrl: string }[]): v
     }
   }
   writeCache(cache);
+}
+
+/** Clear all cached covers and downloaded SGDB images */
+export function clearCoverCache(): void {
+  // Clear the scrape cache (romPath -> coverUrl mapping)
+  writeCache({});
+  // Clear downloaded SGDB images
+  const sgdbDir = sgdbCacheDir();
+  if (existsSync(sgdbDir)) {
+    try {
+      const files = readdirSync(sgdbDir);
+      for (const f of files) {
+        rmSync(join(sgdbDir, f), { force: true });
+      }
+    } catch { /* ignore */ }
+  }
 }
 
 /** Apply cached covers to an array of GameEntry objects (mutates in place) */
@@ -555,4 +575,59 @@ export async function searchSteamGridDB(
     console.error('SteamGridDB search failed:', e);
     throw new Error(`SteamGridDB search failed: ${msg}`);
   }
+}
+
+export interface AutoApplyResult {
+  total: number;
+  alreadyHadCover: number;
+  applied: number;
+  failed: number;
+  skippedNoKey: boolean;
+}
+
+export async function autoApplyCovers(
+  games: GameEntry[],
+  apiKey: string,
+  onProgress?: (current: number, total: number, title: string) => void,
+): Promise<AutoApplyResult> {
+  const result: AutoApplyResult = {
+    total: games.length,
+    alreadyHadCover: 0,
+    applied: 0,
+    failed: 0,
+    skippedNoKey: !apiKey,
+  };
+  if (!apiKey) return result;
+
+  const cache = readCache();
+
+  for (let i = 0; i < games.length; i++) {
+    const game = games[i];
+    if (game.coverUrl || cache[game.romPath]) {
+      result.alreadyHadCover++;
+      continue;
+    }
+
+    onProgress?.(i + 1, games.length, game.title);
+
+    try {
+      const results = await searchSteamGridDB(buildScrapeTitle(game.title), game.platform, apiKey);
+      const cover = results.find(r => r.thumb);
+      if (cover) {
+        cacheCovers([{ romPath: game.romPath, coverUrl: cover.thumb }]);
+        result.applied++;
+      } else {
+        result.failed++;
+      }
+    } catch {
+      result.failed++;
+    }
+
+    // Rate limit: wait 250ms between requests
+    if (i < games.length - 1) {
+      await new Promise(r => setTimeout(r, 250));
+    }
+  }
+
+  return result;
 }

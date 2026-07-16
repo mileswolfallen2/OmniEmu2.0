@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { createReadStream, readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { app } from 'electron';
+import { createGunzip } from 'zlib';
 import type { RetroAchievement, AchievementInfo } from '../shared/types';
 
 // Platform -> RA console ID mapping
@@ -15,17 +16,26 @@ const raConsoleIds: Record<string, number> = {
   dreamcast: 27, arcade: 99,
 };
 
+/** Platforms where RetroAchievements is actually supported and has a decent game count */
+export const raSupportedPlatforms = new Set(Object.keys(raConsoleIds));
+
 const userAgent = 'OmniEmu/0.3.1';
 
 function fetchText(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const req = httpsGet(url, {
-      headers: { 'User-Agent': userAgent },
+      headers: { 'User-Agent': userAgent, 'Accept-Encoding': 'gzip, deflate' },
       timeout: 15000,
     }, (res) => {
-      let data = '';
-      res.on('data', (chunk: string) => data += chunk);
-      res.on('end', () => resolve(data));
+      const encoding = res.headers['content-encoding'];
+      let stream: NodeJS.ReadableStream = res;
+      if (encoding === 'gzip') {
+        stream = res.pipe(createGunzip());
+      }
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+      stream.on('error', reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
@@ -40,12 +50,19 @@ function postForm(url: string, body: string): Promise<string> {
         'User-Agent': userAgent,
         'Content-Type': 'application/x-www-form-urlencoded',
         'Content-Length': Buffer.byteLength(body),
+        'Accept-Encoding': 'gzip, deflate',
       },
       timeout: 15000,
     }, (res) => {
-      let data = '';
-      res.on('data', (chunk: string) => data += chunk);
-      res.on('end', () => resolve(data));
+      const encoding = res.headers['content-encoding'];
+      let stream: NodeJS.ReadableStream = res;
+      if (encoding === 'gzip') {
+        stream = res.pipe(createGunzip());
+      }
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+      stream.on('error', reject);
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
@@ -102,17 +119,20 @@ async function fetchGameList(consoleId: number, apiKey: string, username: string
 
 async function getGameList(consoleId: number, apiKey: string, username: string): Promise<RaGameListEntry[]> {
   const cache = readGameListCache();
-  if (cache[consoleId]) return cache[consoleId];
+  if (cache[consoleId] && cache[consoleId].length > 0) return cache[consoleId];
   const list = await fetchGameList(consoleId, apiKey, username);
-  cache[consoleId] = list;
-  writeGameListCache(cache);
+  if (list.length > 0) {
+    cache[consoleId] = list;
+    writeGameListCache(cache);
+  }
   return list;
 }
 
 function normalizeTitle(title: string): string {
   return title.toLowerCase()
+    .replace(/\b(the|a|an|and|of|in|to|for)\b/g, '')
     .replace(/[^a-z0-9]/g, '')
-    .replace(/the|a|an|and|of|in|to|for/g, '')
+    .replace(/\s+/g, '')
     .trim();
 }
 
@@ -133,12 +153,13 @@ function findGameIdByTitle(gameList: RaGameListEntry[], title: string): number |
 // ---- Main API ----
 
 /** Look up RA game ID by ROM hash (Connect API) */
-async function lookupGameIdByHash(romPath: string): Promise<number | null> {
+async function lookupGameIdByHash(romPath: string, username: string): Promise<number | null> {
   try {
     const hash = await computeMD5(romPath);
-    const body = `r=gameid&m=${hash}`;
+    const body = `r=gameid&m=${hash}&u=${encodeURIComponent(username)}`;
     const response = await postForm('https://retroachievements.org/dorequest.php', body);
     const parsed = JSON.parse(response);
+    console.log('[ra] hash lookup response:', JSON.stringify(parsed).slice(0, 200));
     if (parsed.Success && (parsed.ID || parsed.GameID)) return parsed.ID || parsed.GameID;
     return null;
   } catch (err) {
@@ -208,7 +229,7 @@ export async function getGameAchievements(
   if (!apiKey || !username) return null;
 
   // Try hash-based lookup first
-  let gameId = await lookupGameIdByHash(romPath);
+  let gameId = await lookupGameIdByHash(romPath, username);
 
   // Fall back to title-based lookup
   if (!gameId) {

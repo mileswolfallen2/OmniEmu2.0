@@ -36,19 +36,19 @@ function isSteamDeck(): boolean {
 function applySteamDeckFlags(): void {
   if (!isLinux()) return;
 
-  // Chromium sandbox — Gamescope does not support the required kernel
-  // namespacing so the sandbox must be disabled or it segfaults.
-  app.commandLine.appendSwitch('no-sandbox');
-
-  // GPU sandbox — Gamescope already composites; letting Chromium create a
-  // second GPU sandbox causes a driver conflict.
-  app.commandLine.appendSwitch('disable-gpu-sandbox');
-
-  // ForceANGLE + SwiftShader — fallback to software GL when the native
-  // Mesa driver misbehaves inside Gamescope.  On a real Steam Deck the
-  // ANGLE OpenGL-ES path still hits the AMD driver for performance, but
-  // this prevents the "lost device" crash on session transitions.
   if (isSteamDeck()) {
+    // Chromium sandbox — Gamescope does not support the required kernel
+    // namespacing so the sandbox must be disabled or it segfaults.
+    app.commandLine.appendSwitch('no-sandbox');
+
+    // GPU sandbox — Gamescope already composites; letting Chromium create a
+    // second GPU sandbox causes a driver conflict.
+    app.commandLine.appendSwitch('disable-gpu-sandbox');
+
+    // ForceANGLE + SwiftShader — fallback to software GL when the native
+    // Mesa driver misbehaves inside Gamescope.  On a real Steam Deck the
+    // ANGLE OpenGL-ES path still hits the AMD driver for performance, but
+    // this prevents the "lost device" crash on session transitions.
     app.commandLine.appendSwitch('use-gl', 'angle');
     app.commandLine.appendSwitch('use-angle', 'swiftshader');
     app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
@@ -177,58 +177,58 @@ if (!gotLock) {
       mainWindow.focus();
     }
   });
-}
 
-// On SteamOS, /tmp is a small tmpfs that fills up fast with Chromium
-// caches.  Point the disk cache at the user data directory instead so
-// it persists across sessions and has more room.
-if (isLinux()) {
-  const cacheDir = join(app.getPath('userData'), 'cache');
-  if (!existsSync(cacheDir)) {
-    try { require('fs').mkdirSync(cacheDir, { recursive: true }); } catch { /* ignore */ }
-  }
-  app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
-}
-
-app.whenReady().then(() => {
-  ensureRomsStructure();
-  setupAutoUpdater();
-  registerIpcHandlers();
-
-  try {
-    createWindow();
-  } catch (err) {
-    // If the window creation fails (common on Steam Deck Gaming Mode
-    // when hardware acceleration misbehaves), retry with GPU disabled.
-    console.error('Window creation failed, retrying without GPU:', err);
-    app.commandLine.appendSwitch('disable-gpu');
-    app.commandLine.appendSwitch('disable-software-rasterizer');
-    try { createWindow(); } catch { /* fatal */ }
+  // On SteamOS, /tmp is a small tmpfs that fills up fast with Chromium
+  // caches.  Point the disk cache at the user data directory instead so
+  // it persists across sessions and has more room.
+  if (isLinux()) {
+    const cacheDir = join(app.getPath('userData'), 'cache');
+    if (!existsSync(cacheDir)) {
+      try { require('fs').mkdirSync(cacheDir, { recursive: true }); } catch { /* ignore */ }
+    }
+    app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
   }
 
-  createTray();
+  app.whenReady().then(() => {
+    ensureRomsStructure();
+    setupAutoUpdater();
+    registerIpcHandlers();
 
-  // Auto-generate Pegasus collection files if Pegasus is configured
-  try {
-    const s = settings.get();
-    if (s.betaFeatures && s.romsDirectory) {
-      generatePegasusCollectionsForRomDir(s.romsDirectory);
+    try {
+      createWindow();
+    } catch (err) {
+      // If the window creation fails (common on Steam Deck Gaming Mode
+      // when hardware acceleration misbehaves), retry with GPU disabled.
+      console.error('Window creation failed, retrying without GPU:', err);
+      app.commandLine.appendSwitch('disable-gpu');
+      app.commandLine.appendSwitch('disable-software-rasterizer');
+      try { createWindow(); } catch { /* fatal */ }
     }
-  } catch { /* ignore */ }
 
-  // Auto-start Syncthing if cloud sync was previously enabled
-  try {
-    const s = settings.get();
-    if (s.cloudSyncEnabled) {
-      startSyncthing().catch(() => { /* ignore */ });
-    }
-  } catch { /* ignore */ }
+    createTray();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    else mainWindow?.show();
+    // Auto-generate Pegasus collection files if Pegasus is configured
+    try {
+      const s = settings.get();
+      if (s.betaFeatures && s.romsDirectory) {
+        generatePegasusCollectionsForRomDir(s.romsDirectory);
+      }
+    } catch { /* ignore */ }
+
+    // Auto-start Syncthing if cloud sync was previously enabled
+    try {
+      const s = settings.get();
+      if (s.cloudSyncEnabled) {
+        startSyncthing().catch(() => { /* ignore */ });
+      }
+    } catch { /* ignore */ }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      else mainWindow?.show();
+    });
   });
-});
+}
 
 app.on('window-all-closed', () => {
   if (tray) {

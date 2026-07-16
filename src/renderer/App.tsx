@@ -9,6 +9,7 @@ import { ControllerPage } from './pages/ControllerPage';
 import { UtilitiesPage } from './pages/UtilitiesPage';
 import { SaveManagerPage } from './pages/SaveManagerPage';
 import { CloudSyncPage } from './pages/CloudSyncPage';
+import { InstallerPage } from './pages/InstallerPage';
 import { useGamepadNav } from './hooks/useGamepadNav';
 
 type Page = 'dashboard' | 'emulators' | 'library' | 'saves' | 'cloud' | 'settings' | 'controller' | 'utilities';
@@ -24,31 +25,36 @@ export function applyTheme(theme: string) {
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  const [showInstaller, setShowInstaller] = useState(false);
 
   const { connected, showLegend, dismissLegend } = useGamepadNav(setCurrentPage, currentPage);
 
   useEffect(() => {
-    window.omni.settings.get().then((s) => applyTheme(s.theme));
+    (async () => {
+      const s = await window.omni.settings.get();
+      applyTheme(s.theme);
+      if (!s.firstSetupComplete) setShowInstaller(true);
+    })();
   }, []);
 
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onNavigate={setCurrentPage} />;
+        return <ErrorBoundary><Dashboard onNavigate={setCurrentPage} /></ErrorBoundary>;
       case 'emulators':
-        return <EmulatorsPage />;
+        return <ErrorBoundary><EmulatorsPage /></ErrorBoundary>;
       case 'library':
-        return <LibraryPage />;
+        return <ErrorBoundary><LibraryPage /></ErrorBoundary>;
       case 'saves':
-        return <SaveManagerPage />;
+        return <ErrorBoundary><SaveManagerPage /></ErrorBoundary>;
       case 'cloud':
         return <ErrorBoundary><CloudSyncPage /></ErrorBoundary>;
       case 'settings':
-        return <SettingsPage />;
+        return <ErrorBoundary><SettingsPage /></ErrorBoundary>;
       case 'controller':
-        return <ControllerPage />;
+        return <ErrorBoundary><ControllerPage /></ErrorBoundary>;
       case 'utilities':
-        return <UtilitiesPage />;
+        return <ErrorBoundary><UtilitiesPage /></ErrorBoundary>;
     }
   };
 
@@ -60,6 +66,24 @@ export function App() {
           {renderPage()}
         </div>
       </div>
+
+      {showInstaller && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
+        }}>
+          <div style={{
+            width: '90vw', maxWidth: 820, maxHeight: '85vh',
+            overflowY: 'auto', borderRadius: 16,
+            background: 'var(--bg-primary, #0f0f1a)',
+            border: '1px solid var(--border, #333)',
+            padding: 32,
+          }}>
+            <InstallerPage onClose={() => setShowInstaller(false)} />
+          </div>
+        </div>
+      )}
 
       {connected && showLegend && (
         <div className="controller-legend" onClick={dismissLegend}>

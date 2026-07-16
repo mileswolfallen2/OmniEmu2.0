@@ -67,8 +67,15 @@ export function ControllerPage() {
       }
     }
     setControllers(prev => {
-      const same = prev.length === connected.length &&
-        prev.every((c, i) => c.id === connected[i]?.id && c.index === connected[i]?.index);
+      if (prev.length !== connected.length) return connected;
+      const same = prev.every((c, i) => {
+        const n = connected[i];
+        return c.id === n?.id && c.index === n?.index &&
+          c.buttons.length === n.buttons.length &&
+          c.buttons.every((b, j) => b.pressed === n.buttons[j]?.pressed && b.value === n.buttons[j]?.value) &&
+          c.axes.length === n.axes.length &&
+          c.axes.every((a, j) => a === n.axes[j]);
+      });
       return same ? prev : connected;
     });
     rafRef.current = requestAnimationFrame(poll);

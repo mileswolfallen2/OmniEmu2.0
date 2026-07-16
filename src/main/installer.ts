@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto';
 import { app } from 'electron';
 import { EmulatorDownload, InstallProgress, Platform, Arch } from '../shared/types';
 import { getPlatform, getArch, isWindows, isMacOS, isLinux } from './platform';
+import { settings } from './settings';
 
 type ProgressCallback = (progress: InstallProgress) => void;
 
@@ -156,47 +157,11 @@ async function extractArchive(
     }
     case 'dmg': {
       if (!isMacOS()) throw new Error('DMG files can only be extracted on macOS');
-      onProgress('Opening DMG (please accept the license in the dialog)...');
-      execSync(`open "${archivePath}"`);
-      let mountPoint = '';
-      for (let i = 0; i < 60; i++) {
-        await new Promise(r => setTimeout(r, 1000));
-        try {
-          const lines = execSync('ls /Volumes/').toString().split('\n').filter(Boolean);
-          for (const vol of lines) {
-            const volPath = join('/Volumes', vol);
-            if (existsSync(join(volPath, 'ES-DE.app')) || existsSync(join(volPath, '..app'))) {
-              mountPoint = volPath;
-              break;
-            }
-          }
-          if (!mountPoint) {
-            for (const vol of lines) {
-              const volPath = join('/Volumes', vol);
-              if (statSync(volPath).isDirectory() && vol.toLowerCase().includes('es-de')) {
-                mountPoint = volPath;
-                break;
-              }
-            }
-          }
-          if (!mountPoint) {
-            for (const vol of lines) {
-              if (vol === 'Macintosh HD' || vol.startsWith('Recovery') || vol === 'OpenCode' || vol.startsWith('com.apple')) continue;
-              const volPath = join('/Volumes', vol);
-              try {
-                const entries = readdirSync(volPath);
-                if (entries.some(e => e.endsWith('.app'))) {
-                  mountPoint = volPath;
-                  break;
-                }
-              } catch { /* skip */ }
-            }
-          }
-          if (mountPoint) break;
-        } catch { /* retry */ }
-      }
-      if (!mountPoint) throw new Error('DMG did not mount within 60 seconds. Please accept the license dialog and try again.');
+      onProgress('Extracting DMG...');
+      const mountPoint = join(destDir, '.dmg_mount');
+      if (!existsSync(mountPoint)) mkdirSync(mountPoint, { recursive: true });
       try {
+        execSync(`hdiutil attach "${archivePath}" -nobrowse -quiet -mountpoint "${mountPoint}"`, { timeout: 60000 });
         const entries = readdirSync(mountPoint);
         for (const item of entries) {
           const src = join(mountPoint, item);
@@ -206,6 +171,7 @@ async function extractArchive(
         }
       } finally {
         try { execSync(`hdiutil detach "${mountPoint}" -quiet 2>/dev/null`); } catch { /* ignore */ }
+        try { execSync(`rmdir "${mountPoint}" 2>/dev/null`); } catch { /* ignore */ }
       }
       break;
     }
@@ -291,7 +257,8 @@ export async function installEmulator(
     onProgress({ emulatorId, stage, percent, message });
   };
 
-  const installDir = join(app.getPath('userData'), 'emulators', emulatorId);
+  const baseDir = settings.get().emulatorsDirectory || join(app.getPath('userData'), 'emulators');
+  const installDir = join(baseDir, emulatorId);
   if (!existsSync(installDir)) mkdirSync(installDir, { recursive: true });
 
   const archiveFormats = ['zip', 'tar.gz', 'tar.bz2', 'tar.xz', '7z', 'dmg'];
@@ -343,7 +310,8 @@ async function installViaPackageManager(
   const report = (stage: InstallProgress['stage'], percent: number, message: string) => {
     onProgress({ emulatorId, stage, percent, message });
   };
-  const installDir = join(app.getPath('userData'), 'emulators', emulatorId);
+  const baseDir = settings.get().emulatorsDirectory || join(app.getPath('userData'), 'emulators');
+  const installDir = join(baseDir, emulatorId);
   if (!existsSync(installDir)) mkdirSync(installDir, { recursive: true });
 
   if (platform === 'darwin') {
@@ -367,6 +335,73 @@ async function installViaPackageManager(
   }
 
   return installDir;
+}
+
+const RETROARCH_ESSENTIAL_CORES = [
+  'nestopia_libretro',
+  'snes9x_libretro',
+  'mupen64plus_next_libretro',
+  'mgba_libretro',
+  'gambatte_libretro',
+  'melonds_libretro',
+  'mednafen_psx_hw_libretro',
+  'genesis_plus_gx_libretro',
+  'mednafen_pce_fast_libretro',
+  'flycast_libretro',
+  'pcsx_rearmed_libretro',
+  'beetle_saturn_libretro',
+];
+
+export async function installRetroArchCores(
+  installDir: string,
+  arch: Arch,
+  onProgress: ProgressCallback,
+): Promise<void> {
+  if (!isMacOS()) return;
+
+  const report = (stage: InstallProgress['stage'], percent: number, message: string) => {
+    onProgress({ emulatorId: 'retroarch', stage, percent, message });
+  };
+
+  const coresDir = join(installDir, 'RetroArch.app', 'Contents', 'Resources', 'cores');
+  if (!existsSync(coresDir)) mkdirSync(coresDir, { recursive: true });
+
+  const buildbotArch = arch === 'arm64' ? 'arm64' : 'x86_64';
+  const baseUrl = `https://buildbot.libretro.com/nightly/apple/osx/${buildbotArch}/latest`;
+
+  let completed = 0;
+  const failed: string[] = [];
+  const total = RETROARCH_ESSENTIAL_CORES.length;
+
+  for (const core of RETROARCH_ESSENTIAL_CORES) {
+    const coreFileName = `${core}.dylib`;
+    const destPath = join(coresDir, coreFileName);
+    if (existsSync(destPath)) {
+      completed++;
+      continue;
+    }
+
+    const url = `${baseUrl}/${coreFileName}.zip`;
+    const pct = Math.round((completed / total) * 100);
+    report('downloading', pct, `Downloading core ${completed + 1}/${total}: ${core}...`);
+
+    const zipPath = tempName('.dylib.zip');
+    try {
+      await downloadFile(url, zipPath, () => {});
+      await runAsync('unzip', ['-o', zipPath, '-d', coresDir]);
+    } catch {
+      failed.push(core);
+    } finally {
+      try { unlinkSync(zipPath); } catch { /* ignore */ }
+    }
+    completed++;
+  }
+
+  if (failed.length > 0) {
+    report('done', 100, `RetroArch cores installed (${failed.length} failed: ${failed.join(', ')})`);
+  } else {
+    report('done', 100, 'RetroArch cores installed');
+  }
 }
 
 export function findInstalledBinary(emulatorId: string, installDir: string, executablePath?: string): string | undefined {

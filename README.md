@@ -13,12 +13,19 @@ OmniEmu is a cross-platform emulator manager, game launcher, and ROM library for
 
 ## Features
 
-- **One-Click Emulator Setup** — Download, install, and auto-configure 10 emulators from inside the app
+- **One-Click Emulator Setup** — Download, install, and auto-configure 20+ emulators from inside the app
 - **ROM Library** — Scan your ROMs, browse by platform, and launch games directly
 - **Auto-Update** — Built-in updater keeps OmniEmu current without manual downloads
-- **Game Art Scraping** — Automatically fetches covers, screenshots, and titles
+- **Game Art Scraping** — Automatically fetches covers, screenshots, and metadata from SteamGridDB and libretro-thumbnails
+- **RetroAchievements** — View per-game achievements in the game detail modal (supports RetroArch, PCSX2, DuckStation, Flycast, melonDS, Mednafen)
 - **Controller Navigation** — Navigate the entire UI with a gamepad (DPad, A, B, Start)
+- **Controller Config** — Apply PS/Xbox-aware controller bindings to installed emulators in one click
 - **BIOS Manager** — Scan your BIOS files and update RetroArch's config in one click
+- **Cloud Sync** — Sync save files between devices with built-in Syncthing integration
+- **Save Manager** — Browse, back up, and manage save files across all emulators
+- **Decomp Projects** — Install and manage PC port projects (Ship of Harkinian, 2 Ship 2 Harkinian, SM64, and more)
+- **Video Filters** — Apply CRT shaders and recommended filters to RetroArch
+- **Recommended Settings** — One-click optimal config presets for every supported emulator
 - **Light & Dark Mode** — Choose your theme or follow the system preference
 - **Cross-Platform** — Identical experience on Windows, macOS, and Linux (x64 & ARM64)
 
@@ -30,12 +37,22 @@ OmniEmu is a cross-platform emulator manager, game launcher, and ROM library for
 | RPCS3 | PlayStation 3 | ✅ | ✅ | ✅ |
 | Eden | Nintendo Switch | ✅ | ✅ | ✅ |
 | PCSX2 | PlayStation 2 | ✅ | ✅ | ✅ |
+| DuckStation | PlayStation 1 | ✅ | ✅ | ✅ |
+| Mednafen | PS1, PC Engine, Lynx, Neo Geo Pocket, WonderSwan | ✅ | ✅ | ✅ |
 | MAME | Arcade | ✅ | ✅ | ✅ |
 | PPSSPP | PSP | ✅ | ✅ | ✅ |
-| DuckStation | PlayStation 1 | ✅ | ✅ | ✅ |
 | melonDS | Nintendo DS | ✅ | ✅ | ✅ |
 | Flycast | Dreamcast, Naomi, Atomiswave | ✅ | ✅ | ✅ |
+| Cemu | Wii U | ✅ | ✅ | ✅ |
+| xemu | Original Xbox | ✅ | ✅ | ✅ |
+| Vita3K | PS Vita | ✅ | ✅ | ✅ |
+| Azahar | Nintendo 3DS | ✅ | ✅ | ✅ |
+| Project64 | Nintendo 64 | ✅ | — | — |
+| Snes9x | SNES | ✅ | ✅ | ✅ |
+| mGBA | Game Boy, GBA | ✅ | ✅ | ✅ |
+| Mesen2 | NES, SNES, GB, GBA, PC Engine | ✅ | ✅ | ✅ |
 | RetroArch | Multi-system (NES, SNES, N64, GB/GBA, PS1, and more) | ✅ | ✅ | ✅ |
+| ES-DE | Frontend / launcher | ✅ | ✅ | ✅ |
 
 ## Quick Start
 

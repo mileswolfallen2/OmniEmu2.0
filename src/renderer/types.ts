@@ -36,6 +36,7 @@ declare global {
         configured: (id: string, installPath?: string) => Promise<boolean>;
         openWebsite: (id: string) => Promise<boolean>;
         updateControllerConfig: (id: string, installPath: string, controllerName?: string) => Promise<boolean>;
+        applyRecommendedAll: (fullscreen: boolean) => Promise<{ id: string; ok: boolean }[]>;
         onInstallProgress: (cb: (p: InstallProgress) => void) => () => void;
       };
       decomps: {
@@ -59,9 +60,12 @@ declare global {
         clearRecent: () => Promise<boolean>;
         scrapeArt: (title: string, platform: string) => Promise<string | undefined>;
         cacheCovers: (entries: { romPath: string; coverUrl: string }[]) => Promise<boolean>;
+        clearCoverCache: () => Promise<boolean>;
         searchCoverSGDB: (title: string, platform: string) => Promise<any[]>;
         scrapeMetadata: (romPath: string, title: string, platform: string) => Promise<GameMetadata>;
         achievements: (romPath: string, title: string, platform: string) => Promise<AchievementInfo | null>;
+        autoApplyCovers: () => Promise<{ total: number; alreadyHadCover: number; applied: number; failed: number; skippedNoKey?: boolean }>;
+        onAutoApplyCoversProgress: (cb: (progress: { current: number; total: number; title: string }) => void) => () => void;
       };
       bios: {
         listKnown: () => Promise<any[]>;
@@ -92,6 +96,10 @@ declare global {
       retroachievements: {
         save: (username: string, password: string) => Promise<Record<string, boolean>>;
       };
+      filters: {
+        list: () => Promise<{ id: string; name: string; description: string }[]>;
+        apply: (presetId: string) => Promise<{ success: boolean; message: string; appliedPreset: string }>;
+      };
       updates: {
         check: () => Promise<boolean>;
         download: () => Promise<boolean>;
@@ -117,6 +125,9 @@ declare global {
         emulatorDirs: () => Promise<{ id: string; name: string; saves: string | null }[]>;
         toggleFolderSync: (emuId: string, sync: boolean) => Promise<boolean>;
         onInstallProgress: (cb: (progress: { stage: string; percent: number; message: string }) => void) => () => void;
+      };
+      app: {
+        nukeData: () => Promise<boolean>;
       };
     };
   }

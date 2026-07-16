@@ -16,6 +16,7 @@ const platformLabels: Record<string, string> = {
   psp: 'PSP', pce: 'PC Engine',
   'sega-md': 'Sega Genesis', 'sega-saturn': 'Sega Saturn', 'sega-dc': 'Sega Dreamcast',
   dreamcast: 'Dreamcast', arcade: 'Arcade',
+  lynx: 'Atari Lynx', ngp: 'Neo Geo Pocket', wswan: 'WonderSwan',
 };
 
 const badgeBase = 'https://retroachievements.org/Badge/';
@@ -27,6 +28,7 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [currentScreenshot, setCurrentScreenshot] = useState(0);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | undefined>(game.coverUrl);
 
   useEffect(() => {
     setLoadingMeta(true);
@@ -37,6 +39,12 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
 
   useEffect(() => {
     setLoadingAchievements(true);
+    const supported = ['nes','snes','n64','gb','gbc','gba','nds','gc','wii','ps1','ps2','ps3','psp','pce','sega-md','sega-saturn','sega-dc','dreamcast','arcade'];
+    if (!supported.includes(game.platform)) {
+      setAchievements(null);
+      setLoadingAchievements(false);
+      return;
+    }
     window.omni.game.achievements(game.romPath, game.title, game.platform)
       .then((a) => { setAchievements(a); setLoadingAchievements(false); })
       .catch(() => setLoadingAchievements(false));
@@ -44,7 +52,7 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
 
   const screenshots = metadata?.screenshots || [];
   const hasScreenshots = screenshots.length > 0;
-  const displayScreenshot = hasScreenshots ? screenshots[currentScreenshot] : game.coverUrl;
+  const displayScreenshot = hasScreenshots ? screenshots[currentScreenshot] : coverUrl;
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
@@ -113,11 +121,11 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
                 >
                   Change Cover
                 </button>
-                {game.coverUrl && (
+                {coverUrl && (
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={async () => {
-                      game.coverUrl = undefined;
+                      setCoverUrl(undefined);
                       await window.omni.game.cacheCovers([{ romPath: game.romPath, coverUrl: '' }]);
                     }}
                   >
@@ -173,30 +181,36 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
                 </>
               )}
 
-              <div className="game-detail-achievements">
-                <h4>
-                  Achievements
-                  {achievements && (
-                    <span className="text-sm text-muted" style={{ fontWeight: 400, marginLeft: 8 }}>
-                      {achievements.userProgress}/{achievements.totalAchievements} · {achievements.totalPoints} pts
-                    </span>
-                  )}
-                </h4>
+              {(() => {
+                const raPlatforms = ['nes','snes','n64','gb','gbc','gba','nds','gc','wii','ps1','ps2','ps3','psp','pce','sega-md','sega-saturn','sega-dc','dreamcast','arcade'];
+                if (!raPlatforms.includes(game.platform)) return null;
+                return (
+                  <div className="game-detail-achievements">
+                    <h4>
+                      Achievements
+                      {achievements && (
+                        <span className="text-sm text-muted" style={{ fontWeight: 400, marginLeft: 8 }}>
+                          {achievements.userProgress}/{achievements.totalAchievements} · {achievements.totalPoints} pts
+                        </span>
+                      )}
+                    </h4>
 
-                {loadingAchievements ? (
-                  <p className="text-sm text-muted">Loading achievements...</p>
-                ) : achievements ? (
-                  <div className="achievement-list">
-                    {achievements.achievements.map((a) => (
-                      <AchievementRow key={a.id} achievement={a} />
-                    ))}
+                    {loadingAchievements ? (
+                      <p className="text-sm text-muted">Loading achievements...</p>
+                    ) : achievements ? (
+                      <div className="achievement-list">
+                        {achievements.achievements.map((a) => (
+                          <AchievementRow key={a.id} achievement={a} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted">
+                        Add your RetroAchievements Web API Key in Settings &gt; Utilities to see achievements here.
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted">
-                    Add your RetroAchievements Web API Key in Settings &gt; Utilities to see achievements here.
-                  </p>
-                )}
-              </div>
+                );
+              })()}
             </div>
 
             <button
@@ -215,7 +229,7 @@ export function GameDetailModal({ game, onClose, onLaunch }: Props) {
           gameTitle={game.title}
           platform={game.platform}
           onSelect={async (url) => {
-            game.coverUrl = url;
+            setCoverUrl(url);
             await window.omni.game.cacheCovers([{ romPath: game.romPath, coverUrl: url }]);
             setShowCoverPicker(false);
           }}

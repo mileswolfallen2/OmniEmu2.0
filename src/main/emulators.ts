@@ -1,4 +1,4 @@
-import { execSync, exec, ChildProcess } from 'child_process';
+import { execSync, exec, spawn, ChildProcess } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, renameSync, readFileSync, rmSync, statSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import { app } from 'electron';
@@ -912,6 +912,40 @@ export const knownEmulators: EmulatorConfig[] = [
       linux: 'https://www.mesen.ca/',
     },
   },
+  {
+    id: 'mednafen',
+    name: 'Mednafen',
+    description: 'Multi-system emulator (PS1, PCE, Lynx, NGP, WonderSwan)',
+    platforms: ['ps1', 'pce', 'lynx', 'ngp', 'wswan'],
+    defaultPath: {
+      win32: 'C:\\Program Files\\Mednafen\\mednafen.exe',
+      darwin: '/usr/local/bin/mednafen',
+      linux: '/usr/bin/mednafen',
+    },
+    downloads: {
+      win32: [
+        {
+          url: 'https://github.com/mednafen-emu/mednafen/releases/download/1.32.1/mednafen-1.32.1-win64.zip',
+          format: 'zip',
+          executablePath: 'mednafen.exe',
+        },
+      ],
+      linux: [
+        {
+          url: 'https://github.com/mednafen-emu/mednafen/releases/download/1.32.1/mednafen-1.32.1-linux64.zip',
+          format: 'zip',
+          executablePath: 'mednafen',
+        },
+      ],
+    },
+    packageNames: { linux: 'mednafen', darwin: 'mednafen' },
+    supported: true,
+    websiteUrl: {
+      win32: 'https://mednafen.github.io/',
+      darwin: 'https://mednafen.github.io/',
+      linux: 'https://mednafen.github.io/',
+    },
+  },
 ];
 
 export function findEmulator(id: string): EmulatorConfig | undefined {
@@ -927,13 +961,18 @@ function detectEmulatorPath(config: EmulatorConfig): string | undefined {
     if (existsSync(alt)) return alt;
   }
 
-  try {
-    const cmd = isWindows() ? 'where' : 'which';
-    const result = execSync(`${cmd} ${config.id} 2>${isWindows() ? 'nul' : '/dev/null'}`)
-      .toString().trim();
-    if (result) return result.split('\n')[0];
-  } catch {
-    // not found
+  const userData = app.getPath('userData');
+  const emuDir = settings.get().emulatorsDirectory || join(userData, 'emulators');
+  const omniEmuDir = join(emuDir, config.id);
+  if (existsSync(omniEmuDir)) {
+    try {
+      const cmd = isWindows() ? 'where' : 'which';
+      const result = execSync(`${cmd} ${config.id} 2>${isWindows() ? 'nul' : '/dev/null'}`)
+        .toString().trim();
+      if (result) return result.split('\n')[0];
+    } catch {
+      // not found
+    }
   }
 
   return undefined;
@@ -942,7 +981,8 @@ function detectEmulatorPath(config: EmulatorConfig): string | undefined {
 function alternativePaths(emulatorId: string): string[] {
   const home = homedir();
   const userData = app.getPath('userData');
-  const omniEmuDir = join(userData, 'emulators', emulatorId);
+  const emuDir = settings.get().emulatorsDirectory || join(userData, 'emulators');
+  const omniEmuDir = join(emuDir, emulatorId);
 
   // Check marker file first (written after a successful install)
   const markerFile = join(omniEmuDir, '.installed');
@@ -956,17 +996,11 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'Dolphin.exe'),
       join(omniEmuDir, 'Dolphin'),
       join(omniEmuDir, 'dolphin-emu'),
-      join(home, 'Applications', 'Dolphin.app', 'Contents', 'MacOS', 'Dolphin'),
-      '/usr/local/bin/dolphin-emu',
-      '/snap/bin/dolphin-emu',
     ],
     retroarch: [
       join(omniEmuDir, 'RetroArch.exe'),
       join(omniEmuDir, 'RetroArch'),
       join(omniEmuDir, 'retroarch'),
-      join(home, 'Applications', 'RetroArch.app', 'Contents', 'MacOS', 'RetroArch'),
-      '/usr/local/bin/retroarch',
-      '/snap/bin/retroarch',
     ],
     rpcs3: [
       join(omniEmuDir, 'rpcs3.exe'),
@@ -976,15 +1010,11 @@ function alternativePaths(emulatorId: string): string[] {
     eden: [
       join(omniEmuDir, 'Eden.exe'),
       join(omniEmuDir, 'Eden'),
-      join(home, 'Applications', 'Eden.app', 'Contents', 'MacOS', 'Eden'),
-      '/usr/local/bin/eden',
     ],
     duckstation: [
       join(omniEmuDir, 'duckstation-qt-x64-ReleaseLGL.normal.exe'),
       join(omniEmuDir, 'DuckStation'),
       join(omniEmuDir, 'DuckStation.app', 'Contents', 'MacOS', 'DuckStation'),
-      join(home, 'Applications', 'DuckStation.app', 'Contents', 'MacOS', 'DuckStation'),
-      '/usr/local/bin/duckstation-qt',
     ],
     pcsx2: [
       join(omniEmuDir, 'pcsx2.exe'),
@@ -1000,111 +1030,84 @@ function alternativePaths(emulatorId: string): string[] {
       join(omniEmuDir, 'flycast-win64.exe'),
       join(omniEmuDir, 'flycast'),
       join(omniEmuDir, 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
-      join(home, 'Applications', 'Flycast.app', 'Contents', 'MacOS', 'Flycast'),
-      '/usr/local/bin/flycast',
     ],
     esde: [
       join(omniEmuDir, 'esde.exe'),
       join(omniEmuDir, 'ES-DE', 'esde.exe'),
       join(omniEmuDir, 'es-de'),
       join(omniEmuDir, 'ES-DE.app', 'Contents', 'MacOS', 'esde'),
-      join(home, 'Applications', 'ES-DE.app', 'Contents', 'MacOS', 'esde'),
-      '/usr/local/bin/es-de',
-      '/usr/bin/es-de',
     ],
     neostation: [
       join(omniEmuDir, 'neostation.exe'),
       join(omniEmuDir, 'NeoStation', 'neostation.exe'),
       join(omniEmuDir, 'neostation'),
       join(omniEmuDir, 'NeoStation.app', 'Contents', 'MacOS', 'neostation'),
-      join(home, 'Applications', 'NeoStation.app', 'Contents', 'MacOS', 'neostation'),
-      '/usr/local/bin/neostation',
-      '/usr/bin/neostation',
     ],
     emubuddy: [
       join(omniEmuDir, 'EmuBuddyLauncher.exe'),
       join(omniEmuDir, 'EmuBuddy', 'EmuBuddyLauncher.exe'),
       join(omniEmuDir, 'EmuBuddyLauncher'),
       join(omniEmuDir, 'EmuBuddy.app', 'Contents', 'MacOS', 'EmuBuddy'),
-      join(home, 'Applications', 'EmuBuddy.app', 'Contents', 'MacOS', 'EmuBuddy'),
-      '/usr/local/bin/emubuddy',
-      '/usr/bin/emubuddy',
     ],
     pegasus: [
       join(omniEmuDir, 'pegasus-fe.exe'),
       join(omniEmuDir, 'pegasus-fe'),
       join(omniEmuDir, 'Pegasus.app', 'Contents', 'MacOS', 'pegasus-fe'),
-      join(home, 'Applications', 'Pegasus.app', 'Contents', 'MacOS', 'pegasus-fe'),
-      '/usr/local/bin/pegasus-fe',
-      '/usr/bin/pegasus-fe',
     ],
     melonds: [
       join(omniEmuDir, 'melonDS.exe'),
       join(omniEmuDir, 'melonDS'),
       join(omniEmuDir, 'melonDS.app', 'Contents', 'MacOS', 'melonDS'),
-      join(home, 'Applications', 'melonDS.app', 'Contents', 'MacOS', 'melonDS'),
     ],
     cemu: [
       join(omniEmuDir, 'Cemu.exe'),
       join(omniEmuDir, 'Cemu'),
       join(omniEmuDir, 'Cemu.app', 'Contents', 'MacOS', 'Cemu'),
-      join(home, 'Applications', 'Cemu.app', 'Contents', 'MacOS', 'Cemu'),
-      '/usr/local/bin/cemu',
     ],
     xemu: [
       join(omniEmuDir, 'xemu.exe'),
       join(omniEmuDir, 'xemu'),
       join(omniEmuDir, 'xemu.app', 'Contents', 'MacOS', 'xemu'),
-      join(home, 'Applications', 'xemu.app', 'Contents', 'MacOS', 'xemu'),
-      '/usr/bin/xemu',
     ],
     vita3k: [
       join(omniEmuDir, 'Vita3K.exe'),
       join(omniEmuDir, 'Vita3K'),
       join(omniEmuDir, 'Vita3K.app', 'Contents', 'MacOS', 'Vita3K'),
-      join(home, 'Applications', 'Vita3K.app', 'Contents', 'MacOS', 'Vita3K'),
-      '/usr/bin/vita3k',
     ],
     azahar: [
       join(omniEmuDir, 'azahar.exe'),
       join(omniEmuDir, 'azahar'),
       join(omniEmuDir, 'Azahar.app', 'Contents', 'MacOS', 'azahar'),
-      join(home, 'Applications', 'Azahar.app', 'Contents', 'MacOS', 'azahar'),
-      '/usr/bin/azahar',
     ],
     project64: [
-      join(omniEmuDir, 'Project64.exe'),
       join(omniEmuDir, 'Project64', 'Project64.exe'),
       'C:\\Program Files\\Project64 3.0\\Project64.exe',
       'C:\\Program Files (x86)\\Project64 3.0\\Project64.exe',
+    ],
+    mednafen: [
+      join(omniEmuDir, 'mednafen.exe'),
+      join(omniEmuDir, 'mednafen', 'mednafen.exe'),
+      join(omniEmuDir, 'mednafen'),
+      '/usr/local/bin/mednafen',
+      '/opt/homebrew/bin/mednafen',
     ],
     snes9x: [
       join(omniEmuDir, 'snes9x-x64.exe'),
       join(omniEmuDir, 'snes9x', 'snes9x-x64.exe'),
       join(omniEmuDir, 'snes9x'),
-      join(home, 'Applications', 'Snes9x.app', 'Contents', 'MacOS', 'snes9x'),
-      '/usr/bin/snes9x',
-      '/usr/local/bin/snes9x',
-      '/snap/bin/snes9x',
+      join(omniEmuDir, 'Snes9x.app', 'Contents', 'MacOS', 'snes9x'),
     ],
     mgba: [
       join(omniEmuDir, 'mGBA.exe'),
       join(omniEmuDir, 'mGBA', 'mGBA.exe'),
       join(omniEmuDir, 'mgba-qt'),
       join(omniEmuDir, 'mGBA.app', 'Contents', 'MacOS', 'mGBA'),
-      join(home, 'Applications', 'mGBA.app', 'Contents', 'MacOS', 'mGBA'),
-      '/usr/bin/mgba',
-      '/usr/local/bin/mgba',
-      '/snap/bin/mgba',
     ],
     mesen2: [
       join(omniEmuDir, 'Mesen.exe'),
       join(omniEmuDir, 'Mesen', 'Mesen.exe'),
       join(omniEmuDir, 'Mesen'),
       join(omniEmuDir, 'Mesen.app', 'Contents', 'MacOS', 'Mesen'),
-      join(home, 'Applications', 'Mesen.app', 'Contents', 'MacOS', 'Mesen'),
-      '/usr/bin/Mesen',
-      '/usr/local/bin/Mesen',
     ],
   };
   return common[emulatorId] || [join(omniEmuDir)];
@@ -1182,7 +1185,7 @@ export function launchEmulator(emulatorId: string): boolean {
   const state = checkEmulator(emulatorId);
   if (!state.installed || !state.path) return false;
 
-  const child = exec(`"${state.path}"`, { cwd: dirname(state.path) });
+  const child = spawn(state.path, [], { cwd: dirname(state.path), detached: true, stdio: 'ignore' });
   if (child) child.unref();
 
   return true;
@@ -1196,17 +1199,23 @@ export function launchGame(emulatorId: string, romPath: string): ChildProcess | 
   if (!emu) return null;
 
   const args = launchArgs(emulatorId, romPath);
-  const cmd = `"${state.path}" ${args}`;
 
-  const proc = exec(cmd, {
+  const proc = spawn(state.path, args, {
     cwd: dirname(state.path),
+    detached: true,
+    stdio: 'ignore',
   });
+  if (proc) proc.unref();
 
   return proc;
 }
 
 function findRetroArchCore(romPath: string): string | undefined {
   const ext = extname(romPath).toLowerCase().replace(/^\./, '');
+  const dirPath = dirname(romPath);
+  const dirName = basename(dirPath).toLowerCase().replace(/[^a-z0-9\s-]/g, '');
+  const inferredPlatform = dirHints[dirName] || '';
+
   const corePreference: Record<string, string[]> = {
     'nes': ['nestopia', 'mesen', 'fceumm'],
     'smc': ['snes9x', 'bsnes_hd', 'bsnes', 'mednafen_snes'],
@@ -1221,19 +1230,33 @@ function findRetroArchCore(romPath: string): string | undefined {
     'nds': ['melonds', 'desmume'],
     'bin': ['mednafen_psx_hw', 'pcsx_rearmed', 'swanstation'],
     'cue': ['mednafen_psx_hw', 'pcsx_rearmed', 'swanstation'],
-    'iso': ['mednafen_psx_hw', 'pcsx_rearmed', 'swanstation'],
     'pce': ['mednafen_pce_fast', 'mednafen_pce'],
     'md': ['genesis_plus_gx', 'picodrive'],
     'smd': ['genesis_plus_gx', 'picodrive'],
   };
+
+  // .iso is ambiguous — use parent directory to disambiguate
+  if (ext === 'iso') {
+    if (inferredPlatform === 'ps2') {
+      corePreference['iso'] = ['play'];
+    } else if (inferredPlatform === 'gc') {
+      corePreference['iso'] = ['dolphin'];
+    } else if (inferredPlatform === 'wii') {
+      corePreference['iso'] = ['dolphin'];
+    } else {
+      corePreference['iso'] = ['mednafen_psx_hw', 'pcsx_rearmed', 'swanstation'];
+    }
+  }
+
   const candidates = corePreference[ext];
   if (!candidates) return undefined;
 
   const home = homedir();
   const userData = app.getPath('userData');
+  const emuDir = settings.get().emulatorsDirectory || join(userData, 'emulators');
   const coreDirs = [
-    join(userData, 'emulators', 'retroarch', 'RetroArch.app', 'Contents', 'Resources', 'cores'),
-    join(userData, 'emulators', 'retroarch', 'cores'),
+    join(emuDir, 'retroarch', 'RetroArch.app', 'Contents', 'Resources', 'cores'),
+    join(emuDir, 'retroarch', 'cores'),
     join(home, 'Library', 'Application Support', 'RetroArch', 'cores'),
     '/usr/local/lib/retroarch/cores',
     '/usr/lib/x86_64-linux-gnu/libretro',
@@ -1254,37 +1277,39 @@ function findRetroArchCore(romPath: string): string | undefined {
   return undefined;
 }
 
-function launchArgs(emulatorId: string, romPath: string): string {
+function launchArgs(emulatorId: string, romPath: string): string[] {
   switch (emulatorId) {
     case 'dolphin':
-      return `--exec="${romPath}"`;
+      return ['--exec', romPath];
     case 'rpcs3':
-      return `"${romPath}"`;
+      return [romPath];
     case 'eden':
-      return `"${romPath}"`;
+      return [romPath];
     case 'pcsx2':
-      return `"${romPath}"`;
+      return [romPath];
     case 'mame':
-      return `"${romPath}"`;
+      return [romPath];
     case 'retroarch': {
       const core = findRetroArchCore(romPath);
-      if (core) return `-L "${core}" "${romPath}"`;
-      return `"${romPath}"`;
+      if (core) return ['-L', core, romPath];
+      return [romPath];
     }
     case 'duckstation':
-      return `"${romPath}"`;
+      return [romPath];
     case 'flycast':
-      return `"${romPath}"`;
+      return [romPath];
     case 'esde':
-      return '';
+      return [];
     case 'neostation':
-      return '';
+      return [];
     case 'emubuddy':
-      return '';
+      return [];
     case 'pegasus':
-      return '';
+      return [];
+    case 'mednafen':
+      return [romPath];
     default:
-      return `"${romPath}"`;
+      return [romPath];
   }
 }
 
@@ -1443,7 +1468,8 @@ function guessPlatform(ext: string, dirPath?: string): string {
 
 export function uninstallEmulator(id: string): boolean {
   const userData = app.getPath('userData');
-  const installDir = join(userData, 'emulators', id);
+  const emuDir = settings.get().emulatorsDirectory || join(userData, 'emulators');
+  const installDir = join(emuDir, id);
   const configMarker = join(userData, 'configs', `${id}.configured`);
   let removed = false;
 

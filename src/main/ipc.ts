@@ -1,6 +1,7 @@
-import { ipcMain, shell, dialog, BrowserWindow } from 'electron';
+import { ipcMain, shell, dialog, BrowserWindow, safeStorage } from 'electron';
 import { join } from 'path';
-import { writeFileSync } from 'fs';
+import { writeFileSync, rmSync, existsSync } from 'fs';
+import { app } from 'electron';
 import {
   getAllEmulatorStates,
   checkEmulator,
@@ -24,20 +25,22 @@ import {
   openDecompWebsite,
   setDecompRomPath,
 } from './decomps';
-import { installEmulator, findInstalledBinary } from './installer';
-import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerConfig, applyRetroAchievements } from './configurator';
+import { installEmulator, findInstalledBinary, installRetroArchCores } from './installer';
+import { applyRecommendedConfig, getPresets, checkConfigured, applyControllerConfig, applyRetroAchievements, patchEmulatorFullscreen } from './configurator';
 import { settings } from './settings';
 import { getSystemInfo, platformName, getPlatform, getArch } from './platform';
 import { checkForUpdates, downloadUpdate, quitAndInstall } from './updater';
 import { InstallProgress, AppSettings, GameEntry, AchievementInfo } from '../shared/types';
-import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers, scrapeGameMetadata, searchSteamGridDB } from './scraper';
-import { getGameAchievements } from './ra';
+import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, cacheCovers, clearCoverCache, scrapeGameMetadata, searchSteamGridDB, autoApplyCovers } from './scraper';
+import { getGameAchievements, raSupportedPlatforms } from './ra';
+import { FILTER_PRESETS, applyFilterPreset } from './filters';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
 import { listAllSaves, deleteSave, backupSave } from './saveManager';
 import {
   installSyncthing,
   startSyncthing,
   stopSyncthing,
+  uninstallSyncthing,
   getSyncthingStatus,
   addRemoteDevice,
   removeRemoteDevice,
@@ -71,6 +74,23 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('emulators:system-assignments', () => getSystemEmulators());
   ipcMain.handle('emulators:states', () => getAllEmulatorStates());
   ipcMain.handle('emulators:check', (_event, id: string) => checkEmulator(id));
+
+  // Apply recommended settings to all installed emulators
+  ipcMain.handle('emulators:apply-recommended-all', async (_event, fullscreen: boolean) => {
+    const states = getAllEmulatorStates();
+    const installed = states.filter(s => s.installed);
+    const results: { id: string; ok: boolean }[] = [];
+    for (const emu of installed) {
+      try {
+        const ok = await applyRecommendedConfig(emu.config.id, emu.path || '', (p) => {});
+        if (ok) patchEmulatorFullscreen(emu.config.id, emu.path || '', fullscreen);
+        results.push({ id: emu.config.id, ok });
+      } catch {
+        results.push({ id: emu.config.id, ok: false });
+      }
+    }
+    return results;
+  });
 
   // Install emulator - direct download + install
   ipcMain.handle(
@@ -127,6 +147,11 @@ export function registerIpcHandlers(): void {
 
       const installDir = await installEmulator(emulatorId, downloads ?? [], platform, arch, sendProgress, config.packageNames?.[platform]);
 
+      // On macOS, download RetroArch cores individually (no bulk archive exists)
+      if (emulatorId === 'retroarch' && platform === 'darwin') {
+        await installRetroArchCores(installDir, arch, sendProgress);
+      }
+
       // Try to find the binary and create a symlink or record it
       const download = (downloads ?? []).filter((d) => !d.arch || d.arch === arch)[0];
       const binary = findInstalledBinary(emulatorId, installDir, download?.executablePath);
@@ -134,6 +159,12 @@ export function registerIpcHandlers(): void {
         const marker = join(installDir, '.installed');
         writeFileSync(marker, binary);
       }
+
+      // Apply recommended settings after install
+      try {
+        sendProgress({ emulatorId, stage: 'configuring', percent: 0, message: 'Applying recommended settings...' });
+        await applyRecommendedConfig(emulatorId, installDir, sendProgress);
+      } catch { /* non-fatal */ }
 
       // Re-check state after install
       return checkEmulator(emulatorId);
@@ -293,6 +324,18 @@ export function registerIpcHandlers(): void {
     return true;
   });
 
+  // Clear all cached covers
+  ipcMain.handle('games:clear-cover-cache', () => {
+    clearCoverCache();
+    return true;
+  });
+
+  // Recommended video filters
+  ipcMain.handle('filters:list', () => FILTER_PRESETS);
+  ipcMain.handle('filters:apply', async (_event, presetId: string) => {
+    return applyFilterPreset(presetId);
+  });
+
   // Search SteamGridDB for cover art options
   ipcMain.handle('games:search-cover-sgdb', async (_event, title: string, platform: string) => {
     const s = settings.get();
@@ -307,13 +350,34 @@ export function registerIpcHandlers(): void {
 
   // Fetch RetroAchievements for a game
   ipcMain.handle('games:achievements', async (_event, romPath: string, title: string, platform: string) => {
+    if (!raSupportedPlatforms.has(platform)) return null;
     const s = settings.get();
     if (!s.retroAchievementsApiKey || !s.retroAchievementsUsername) return null;
     return getGameAchievements(romPath, title, platform, s.retroAchievementsApiKey, s.retroAchievementsUsername);
   });
 
+  // Auto-apply covers from SteamGridDB
+  ipcMain.handle('games:auto-apply-covers', async (event) => {
+    const s = settings.get();
+    if (!s.steamGridDbApiKey) return { total: 0, alreadyHadCover: 0, applied: 0, failed: 0, skippedNoKey: true };
+    const romsDir = getRomsDirectory();
+    const games = scanRoms(romsDir);
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return autoApplyCovers(games, s.steamGridDbApiKey, (current, total, title) => {
+      win?.webContents.send('games:auto-apply-covers-progress', { current, total, title });
+    });
+  });
+
   // Settings
-  ipcMain.handle('settings:get', () => settings.get());
+  ipcMain.handle('settings:get', async () => {
+    const s = settings.get();
+    if (s.retroAchievementsPassword && safeStorage.isEncryptionAvailable()) {
+      try {
+        s.retroAchievementsPassword = safeStorage.decryptString(Buffer.from(s.retroAchievementsPassword, 'base64'));
+      } catch { /* unencrypted legacy value, return as-is */ }
+    }
+    return s;
+  });
   ipcMain.handle('settings:save', (_event, s: Partial<AppSettings>) =>
     settings.save(s)
   );
@@ -360,8 +424,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     'retroachievements:save',
     async (_event, username: string, password: string) => {
-      const s = settings.get();
-      settings.save({ retroAchievementsUsername: username, retroAchievementsPassword: password });
+      const encrypted = safeStorage.isEncryptionAvailable()
+        ? safeStorage.encryptString(password).toString('base64')
+        : password;
+      settings.save({ retroAchievementsUsername: username, retroAchievementsPassword: encrypted });
       const results = await applyRetroAchievements(username, password);
       return results;
     }
@@ -485,6 +551,10 @@ export function registerIpcHandlers(): void {
     return false;
   });
 
+  ipcMain.handle('cloud:uninstall', async () => {
+    return uninstallSyncthing();
+  });
+
   // Pending devices and folders
   ipcMain.handle('cloud:pending-devices', async () => {
     try {
@@ -544,5 +614,19 @@ export function registerIpcHandlers(): void {
     } catch {
       return false;
     }
+  });
+
+  // Nuke all app data
+  ipcMain.handle('app:nuke-data', async () => {
+    const dataDir = app.getPath('userData');
+    const dirs = ['emulators', 'downloads', 'syncthing', 'decomps', 'cache'];
+    for (const d of dirs) {
+      const p = join(dataDir, d);
+      if (existsSync(p)) rmSync(p, { recursive: true, force: true });
+    }
+    const s = settings.reset();
+    s.firstSetupComplete = false;
+    settings.save(s);
+    return true;
   });
 }

@@ -181,8 +181,7 @@ const SAVE_EXTENSIONS = new Set([
   '.mcd', '.mcr', '.mc0', '.mc1', '.mc2', '.mc3',
   '.gci', '.raw', '.ags',
   '.mem', '.psm',
-  '.save', '.Save',
-  '.SVS',
+  '.save', '.Save', '.svs',
   '.pfd',
   '.bin',
 ]);

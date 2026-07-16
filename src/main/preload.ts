@@ -54,6 +54,10 @@ const api = {
     configured: (id: string, installPath?: string): Promise<boolean> =>
       ipcRenderer.invoke('emulators:configured', id, installPath),
 
+    /** Apply recommended settings to all installed emulators */
+    applyRecommendedAll: (fullscreen: boolean): Promise<{ id: string; ok: boolean }[]> =>
+      ipcRenderer.invoke('emulators:apply-recommended-all', fullscreen),
+
     /** Open the emulator's website in browser (fallback) */
     openWebsite: (id: string): Promise<boolean> =>
       ipcRenderer.invoke('emulators:open-website', id),
@@ -105,12 +109,28 @@ const api = {
       ipcRenderer.invoke('games:scrape-art', title, platform),
     cacheCovers: (entries: { romPath: string; coverUrl: string }[]): Promise<boolean> =>
       ipcRenderer.invoke('games:cache-covers', entries),
+    clearCoverCache: (): Promise<boolean> =>
+      ipcRenderer.invoke('games:clear-cover-cache'),
     searchCoverSGDB: (title: string, platform: string): Promise<any[]> =>
       ipcRenderer.invoke('games:search-cover-sgdb', title, platform),
     scrapeMetadata: (romPath: string, title: string, platform: string): Promise<GameMetadata> =>
       ipcRenderer.invoke('games:scrape-metadata', romPath, title, platform),
     achievements: (romPath: string, title: string, platform: string): Promise<AchievementInfo | null> =>
       ipcRenderer.invoke('games:achievements', romPath, title, platform),
+    autoApplyCovers: (): Promise<{ total: number; alreadyHadCover: number; applied: number; failed: number; skippedNoKey?: boolean }> =>
+      ipcRenderer.invoke('games:auto-apply-covers'),
+    onAutoApplyCoversProgress: (cb: (progress: { current: number; total: number; title: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, p: { current: number; total: number; title: string }) => cb(p);
+      ipcRenderer.on('games:auto-apply-covers-progress', handler);
+      return () => ipcRenderer.removeListener('games:auto-apply-covers-progress', handler);
+    },
+  },
+
+  filters: {
+    list: (): Promise<{ id: string; name: string; description: string }[]> =>
+      ipcRenderer.invoke('filters:list'),
+    apply: (presetId: string): Promise<{ success: boolean; message: string; appliedPreset: string }> =>
+      ipcRenderer.invoke('filters:apply', presetId),
   },
 
   bios: {
@@ -190,6 +210,7 @@ const api = {
     removeFolder: (folderId: string): Promise<boolean> =>
       ipcRenderer.invoke('cloud:remove-folder', folderId),
     openWebUI: (): Promise<boolean> => ipcRenderer.invoke('cloud:open-web-ui'),
+    uninstall: (): Promise<boolean> => ipcRenderer.invoke('cloud:uninstall'),
     pendingDevices: (): Promise<SyncthingPendingDevice[]> => ipcRenderer.invoke('cloud:pending-devices'),
     acceptPendingDevice: (deviceId: string): Promise<boolean> =>
       ipcRenderer.invoke('cloud:accept-pending-device', deviceId),
@@ -206,6 +227,10 @@ const api = {
       ipcRenderer.on('cloud:install-progress', handler);
       return () => ipcRenderer.removeListener('cloud:install-progress', handler);
     },
+  },
+
+  app: {
+    nukeData: (): Promise<boolean> => ipcRenderer.invoke('app:nuke-data'),
   },
 };
 
