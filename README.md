@@ -34,7 +34,7 @@ OmniEmu is a cross-platform emulator manager, game launcher, and ROM library for
 | Emulator | Systems | Windows | macOS | Linux |
 |---|---|---|---|---|
 | Dolphin | GameCube, Wii | ✅ | ✅ | ✅ |
-| RPCS3 | PlayStation 3 | ✅ | ✅ | ✅ |
+| RPCS3 | PlayStation 3 | ✅ | — | ✅ |
 | Eden | Nintendo Switch | ✅ | ✅ | ✅ |
 | PCSX2 | PlayStation 2 | ✅ | ✅ | ✅ |
 | DuckStation | PlayStation 1 | ✅ | ✅ | ✅ |
