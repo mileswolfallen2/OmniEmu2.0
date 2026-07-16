@@ -52,7 +52,6 @@ OmniEmu is a cross-platform emulator manager, game launcher, and ROM library for
 | mGBA | Game Boy, GBA | ✅ | ✅ | ✅ |
 | Mesen2 | NES, SNES, GB, GBA, PC Engine | ✅ | ✅ | ✅ |
 | RetroArch | Multi-system (NES, SNES, N64, GB/GBA, PS1, and more) | ✅ | ✅ | ✅ |
-| ES-DE | Frontend / launcher | ✅ | ✅ | ✅ |
 
 ## Quick Start
 
