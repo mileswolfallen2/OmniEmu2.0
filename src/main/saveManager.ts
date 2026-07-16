@@ -41,6 +41,16 @@ function resolveRetroarchSaveDirs(): SaveDirConfig {
 
   if (platform === 'win32') {
     candidates.push(join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'RetroArch'));
+    // Standalone/portable RetroArch on Windows: saves live next to retroarch.exe
+    // Check the emulator's install directory from settings
+    try {
+      const emuDir = settings.get().emulatorsDirectory || join(home, 'OmniEmu', 'emulators');
+      const portableRetroarch = join(emuDir, 'retroarch');
+      if (existsSync(portableRetroarch)) candidates.push(portableRetroarch);
+    } catch { /* ignore */ }
+    // Also check common standalone locations
+    candidates.push(join('C:', 'Program Files', 'RetroArch'));
+    candidates.push(join('C:', 'Program Files (x86)', 'RetroArch'));
   } else if (platform === 'darwin') {
     candidates.push(join(home, 'Library', 'Application Support', 'RetroArch'));
     candidates.push(join(home, 'Documents', 'RetroArch'));
@@ -65,13 +75,13 @@ function resolveRetroarchSaveDirs(): SaveDirConfig {
       let states: string | undefined;
 
       if (saveDir && saveDir !== 'default') {
-        saves = saveDir.startsWith('/') ? saveDir : join(dir, saveDir);
+        saves = (saveDir.startsWith('/') || /^[A-Za-z]:\\/.test(saveDir)) ? saveDir : join(dir, saveDir);
       } else {
         saves = join(dir, 'saves');
       }
 
       if (stateDir && stateDir !== 'default') {
-        states = stateDir.startsWith('/') ? stateDir : join(dir, stateDir);
+        states = (stateDir.startsWith('/') || /^[A-Za-z]:\\/.test(stateDir)) ? stateDir : join(dir, stateDir);
       } else {
         states = join(dir, 'states');
       }

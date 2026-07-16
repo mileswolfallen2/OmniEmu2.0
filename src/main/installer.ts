@@ -127,6 +127,48 @@ function get7zaPath(): string {
   }
 }
 
+/** Extract a .7z archive, trying bundled 7za then system 7z */
+async function extract7z(archivePath: string, destDir: string): Promise<void> {
+  // Try bundled 7za from 7zip-bin
+  try {
+    const sevenZa = get7zaPath();
+    await runAsync(sevenZa, ['x', archivePath, `-o${destDir}`, '-y']);
+    return;
+  } catch { /* bundled binary failed, try system fallback */ }
+
+  // Try system-installed 7z
+  try {
+    await runAsync('7z', ['x', archivePath, `-o${destDir}`, '-y']);
+    return;
+  } catch { /* system 7z not available */ }
+
+  throw new Error('7z extraction failed — no working 7z binary found (bundled or system)');
+}
+
+/** Extract a .zip archive with Windows fallback */
+async function extractZip(archivePath: string, destDir: string): Promise<void> {
+  if (isWindows()) {
+    // Windows: try PowerShell Expand-Archive first, then 7z, then bundled 7za
+    try {
+      const psPath = join(destDir);
+      await runAsync('powershell', [
+        '-NoProfile', '-Command',
+        `Expand-Archive -Path '${archivePath}' -DestinationPath '${psPath}' -Force`,
+      ]);
+      return;
+    } catch { /* PowerShell Expand-Archive failed */ }
+
+    // Fallback: try 7z for zip extraction
+    try {
+      await extract7z(archivePath, destDir);
+      return;
+    } catch { /* 7z not available */ }
+  }
+
+  // macOS/Linux: use unzip
+  await runAsync('unzip', ['-o', archivePath, '-d', destDir]);
+}
+
 async function extractArchive(
   archivePath: string,
   destDir: string,
@@ -139,7 +181,7 @@ async function extractArchive(
 
   switch (format) {
     case 'zip':
-      await runAsync('unzip', ['-o', archivePath, '-d', destDir]);
+      await extractZip(archivePath, destDir);
       break;
     case 'tar.gz':
       await runAsync('tar', ['-xzf', archivePath, '-C', destDir]);
@@ -151,8 +193,7 @@ async function extractArchive(
       await runAsync('tar', ['-xJf', archivePath, '-C', destDir]);
       break;
     case '7z': {
-      const sevenZa = get7zaPath();
-      await runAsync(sevenZa, ['x', archivePath, `-o${destDir}`, '-y']);
+      await extract7z(archivePath, destDir);
       break;
     }
     case 'dmg': {

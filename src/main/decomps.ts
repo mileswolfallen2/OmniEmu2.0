@@ -633,20 +633,40 @@ async function extractArchive(
   decompId: string,
 ): Promise<void> {
   const { execSync } = require('child_process');
+  const platform = process.platform;
 
   try {
     if (archiveName.endsWith('.zip')) {
       onProgress({ decompId, stage: 'extracting', percent: 75, message: 'Extracting zip archive...' });
-      execSync(`unzip -o "${archivePath}" -d "${destDir}"`, { timeout: 300000 });
+      if (platform === 'win32') {
+        // Windows: use PowerShell Expand-Archive, fallback to 7z
+        try {
+          execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${destDir}' -Force"`, { timeout: 300000 });
+        } catch {
+          // Fallback: try 7z for zip
+          try {
+            const sevenZip = require('7zip-bin').path7za;
+            execSync(`"${sevenZip}" x "${archivePath}" -o"${destDir}" -y`, { timeout: 300000 });
+          } catch {
+            execSync(`7z x "${archivePath}" -o"${destDir}" -y`, { timeout: 300000 });
+          }
+        }
+      } else {
+        execSync(`unzip -o "${archivePath}" -d "${destDir}"`, { timeout: 300000 });
+      }
     } else if (archiveName.endsWith('.tar.gz') || archiveName.endsWith('.tgz')) {
       onProgress({ decompId, stage: 'extracting', percent: 75, message: 'Extracting tar archive...' });
       execSync(`tar -xzf "${archivePath}" -C "${destDir}"`, { timeout: 300000 });
     } else if (archiveName.endsWith('.7z')) {
       onProgress({ decompId, stage: 'extracting', percent: 75, message: 'Extracting 7z archive...' });
-      const sevenZip = join(require('app-root-path').toString(), 'node_modules', '7zip-bin', 'vendor', '7z');
-      if (existsSync(sevenZip)) {
+      // Try bundled 7za first, then system 7z
+      let extracted = false;
+      try {
+        const sevenZip = require('7zip-bin').path7za;
         execSync(`"${sevenZip}" x "${archivePath}" -o"${destDir}" -y`, { timeout: 300000 });
-      } else {
+        extracted = true;
+      } catch { /* bundled 7za failed */ }
+      if (!extracted) {
         execSync(`7z x "${archivePath}" -o"${destDir}" -y`, { timeout: 300000 });
       }
     }
