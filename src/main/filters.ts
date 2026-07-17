@@ -67,7 +67,7 @@ function writeRetroarchCfg(cfgPath: string, lines: string[]): void {
 function httpsGetBuffer(url: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const req = httpsGet(url, {
-      headers: { 'User-Agent': 'OmniEmu/0.3.2' },
+      headers: { 'User-Agent': 'OmniEmu/0.3.3' },
       timeout: 15000,
     }, (res) => {
       if (res.statusCode === 301 || res.statusCode === 302) {

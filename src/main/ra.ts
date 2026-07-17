@@ -19,7 +19,7 @@ const raConsoleIds: Record<string, number> = {
 /** Platforms where RetroAchievements is actually supported and has a decent game count */
 export const raSupportedPlatforms = new Set(Object.keys(raConsoleIds));
 
-const userAgent = 'OmniEmu/0.3.2';
+const userAgent = 'OmniEmu/0.3.3';
 
 function fetchText(url: string): Promise<string> {
   return new Promise((resolve, reject) => {

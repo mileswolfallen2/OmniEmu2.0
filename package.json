@@ -1,6 +1,6 @@
 {
   "name": "omniemu2",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Cross-platform emulator manager, game launcher and ROM manager",
   "main": "dist/main/index.js",
   "scripts": {
@@ -98,7 +98,7 @@
     }
   },
   "allowScripts": {
-    "electron@43.2.0": true,
+    "electron@43.3.0": true,
     "esbuild@0.25.12": true,
     "fsevents@2.3.3": true
   }

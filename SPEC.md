@@ -5,7 +5,7 @@
 OmniEmu is a cross-platform desktop application for managing emulators, launching games, and organizing ROM libraries. Built with Electron, React, and TypeScript.
 
 **Repository:** [github.com/mileswolfallen2/OmniEmu2.0](https://github.com/mileswolfallen2/OmniEmu2.0)
-**Version:** 0.3.2
+**Version:** 0.3.3
 **License:** MIT (Copyright 2026 mileswa1q22)
 
 ---
@@ -33,7 +33,7 @@ OmniEmu is a cross-platform desktop application for managing emulators, launchin
 
 | Technology | Version | Purpose | License |
 |---|---|---|---|
-| Electron | 43.2.0 | Desktop app shell | MIT |
+| Electron | 43.3.0 | Desktop app shell | MIT |
 | React | 19.2.7 | UI framework | MIT |
 | React DOM | 19.2.7 | DOM rendering | MIT |
 | TypeScript | 5.9.3 | Type-safe language | Apache-2.0 |

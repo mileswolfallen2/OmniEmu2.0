@@ -34,7 +34,7 @@ export function Sidebar({ currentPage, onNavigate }: TopBarProps) {
           </button>
         ))}
       </nav>
-      <div className="topbar-version">v0.3.2</div>
+      <div className="topbar-version">v0.3.3</div>
     </div>
   );
 }

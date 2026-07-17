@@ -1,4 +1,4 @@
-# OmniEmu v0.3.2 Release Notes
+# OmniEmu v0.3.3 Release Notes
 
 > All your games. One place.
 
@@ -22,23 +22,6 @@ Browse, back up, and delete game saves across all your emulators.
 - Backup saves before deleting
 - **Restore** — restore any previous backup with one click (new)
 - **Open Backup Folder** — jump straight to your backups on disk (new)
-
-### New Emulators
-Five new emulators added to the library:
-| Emulator | System | Platforms |
-|---|---|---|
-| **Cemu** | Wii U | Windows, macOS, Linux |
-| **xemu** | Original Xbox | Windows, macOS, Linux |
-| **Vita3K** | PS Vita | Windows, macOS, Linux |
-| **Azahar** | Nintendo 3DS | Windows, macOS, Linux |
-| **Mednafen** | Multi-system | Windows, macOS, Linux |
-
-### Frontend Support
-Launch alternative frontends directly from OmniEmu — toggle on in **Settings > Experimental > Frontend Support**:
-- **ES-DE** — full integration with auto-configuration, scraping, themes, and more
-- **NeoStation** — Flutter-based frontend with built-in ScreenScraper integration
-- **Pegasus** — automatic collection file generation from your ROM library
-- **EmuBuddy** — available to all users (not behind the toggle)
 
 ### Decompilations
 Native PC ports built from reverse-engineered source code — toggle on in **Settings > Experimental > Decomp Projects**:
