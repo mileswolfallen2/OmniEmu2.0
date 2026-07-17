@@ -1,11 +1,11 @@
 import { existsSync, readdirSync, statSync, unlinkSync, copyFileSync, mkdirSync, readFileSync } from 'fs';
 import { join, extname, basename } from 'path';
-import { app } from 'electron';
+import { app, shell } from 'electron';
 import { homedir } from 'os';
 import { getPlatform } from './platform';
 import { settings } from './settings';
 import { knownEmulators } from './emulators';
-import { SaveEntry, EmulatorSaves } from '../shared/types';
+import { SaveEntry, EmulatorSaves, BackupEntry } from '../shared/types';
 
 const platform = getPlatform();
 const home = homedir();
@@ -343,4 +343,75 @@ export function getEmulatorSaveDirs() {
     ...e,
     saves: getSaveDir(e.id),
   })).filter(e => e.saves);
+}
+
+export function getBackupDir(): string {
+  return join(app.getPath('userData'), 'save-backups');
+}
+
+export function listBackups(): BackupEntry[] {
+  try {
+    const backupDir = getBackupDir();
+    if (!existsSync(backupDir)) return [];
+    const files = readdirSync(backupDir).filter(f => !f.startsWith('.'));
+    return files.map((f) => {
+      const fullPath = join(backupDir, f);
+      const st = statSync(fullPath);
+      // Filename pattern: {timestamp}_{originalName}
+      const underscoreIdx = f.indexOf('_');
+      const stamp = underscoreIdx > 0 ? f.slice(0, underscoreIdx).replace(/-/g, (m, offset) => (offset >= 10 && offset <= 15) ? ':' : m) : '';
+      const originalName = underscoreIdx > 0 ? f.slice(underscoreIdx + 1) : f;
+      return {
+        backupPath: fullPath,
+        originalName,
+        backupTime: stamp || st.mtime.toISOString(),
+        fileSize: st.size,
+      };
+    }).sort((a, b) => b.backupTime.localeCompare(a.backupTime));
+  } catch { /* ignore */ }
+  return [];
+}
+
+export function restoreBackup(backupPath: string): boolean {
+  try {
+    if (!existsSync(backupPath)) return false;
+    const backupDir = getBackupDir();
+    if (!backupPath.startsWith(backupDir)) return false;
+    const fileName = basename(backupPath);
+    const underscoreIdx = fileName.indexOf('_');
+    const originalName = underscoreIdx > 0 ? fileName.slice(underscoreIdx + 1) : fileName;
+
+    // Try to find the original save directory by matching the original filename
+    const allSaves = listAllSaves();
+    for (const emu of allSaves) {
+      for (const save of emu.saves) {
+        if (save.fileName === originalName) {
+          copyFileSync(backupPath, save.filePath);
+          return true;
+        }
+      }
+    }
+
+    // Fallback: restore to the first emulator save directory that exists
+    for (const emu of EMU_SAVE_META) {
+      const dir = getSaveDir(emu.id);
+      if (dir && existsSync(dir)) {
+        copyFileSync(backupPath, join(dir, originalName));
+        return true;
+      }
+    }
+  } catch { /* ignore */ }
+  return false;
+}
+
+export function openBackupFolder(): boolean {
+  try {
+    const backupDir = getBackupDir();
+    if (!existsSync(backupDir)) {
+      mkdirSync(backupDir, { recursive: true });
+    }
+    shell.openPath(backupDir);
+    return true;
+  } catch { /* ignore */ }
+  return false;
 }

@@ -29,6 +29,8 @@ export interface EmulatorConfig {
   /** Package manager names for auto-install via system pkg manager */
   packageNames?: Partial<Record<Platform, string>>;
   supported: boolean;
+  /** Whether this emulator is in beta / experimental */
+  beta?: boolean;
   /** URL to fetch recommended config presets from */
   presetUrl?: string;
   /** Website URL for manual/fallback */
@@ -228,6 +230,13 @@ export interface EmulatorSaves {
   saveDir: string;
   stateDir?: string;
   saves: SaveEntry[];
+}
+
+export interface BackupEntry {
+  backupPath: string;
+  originalName: string;
+  backupTime: string;
+  fileSize: number;
 }
 
 export interface SyncthingStatus {

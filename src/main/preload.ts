@@ -167,6 +167,11 @@ const api = {
       ipcRenderer.invoke('saves:delete', filePath),
     backup: (filePath: string): Promise<string | null> =>
       ipcRenderer.invoke('saves:backup', filePath),
+    listBackups: (): Promise<any[]> => ipcRenderer.invoke('saves:list-backups'),
+    restore: (backupPath: string): Promise<boolean> =>
+      ipcRenderer.invoke('saves:restore', backupPath),
+    openBackupFolder: (): Promise<boolean> =>
+      ipcRenderer.invoke('saves:open-backup-folder'),
     openFolder: (folderPath: string): Promise<boolean> =>
       ipcRenderer.invoke('saves:open-folder', folderPath),
     selectDirectory: (): Promise<string | null> =>

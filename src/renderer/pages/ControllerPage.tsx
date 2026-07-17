@@ -51,6 +51,7 @@ export function ControllerPage() {
   const [emulators, setEmulators] = useState<EmulatorState[]>([]);
   const [configStatus, setConfigStatus] = useState<string>('');
   const rafRef = useRef<number>(0);
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const poll = useCallback(() => {
     const gamepads = navigator.getGamepads();
@@ -109,6 +110,7 @@ export function ControllerPage() {
       window.removeEventListener('gamepadconnected', onConnected);
       window.removeEventListener('gamepaddisconnected', onDisconnected);
       cancelAnimationFrame(rafRef.current);
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
     };
   }, [poll]);
 
@@ -120,7 +122,8 @@ export function ControllerPage() {
     } catch (e: any) {
       setConfigStatus(`Error: ${e.message}`);
     }
-    setTimeout(() => setConfigStatus(''), 4000);
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => setConfigStatus(''), 4000);
   };
 
   return (

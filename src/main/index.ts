@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, dialog } from 'electron';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { registerIpcHandlers } from './ipc';
@@ -7,7 +7,7 @@ import { isMacOS, isLinux } from './platform';
 import { ensureRomsStructure } from './emulators';
 import { setupAutoUpdater } from './updater';
 import { generatePegasusCollectionsForRomDir } from './configurator';
-import { startSyncthing } from './syncthing';
+import { startSyncthing, stopSyncthing } from './syncthing';
 
 // ---------------------------------------------------------------------------
 // Steam Deck / SteamOS (Gamescope) compatibility
@@ -190,7 +190,7 @@ if (!gotLock) {
   }
 
   app.whenReady().then(() => {
-    ensureRomsStructure();
+    try { ensureRomsStructure(); } catch (err) { console.error('ensureRomsStructure failed:', err); }
     setupAutoUpdater();
     registerIpcHandlers();
 
@@ -202,7 +202,12 @@ if (!gotLock) {
       console.error('Window creation failed, retrying without GPU:', err);
       app.commandLine.appendSwitch('disable-gpu');
       app.commandLine.appendSwitch('disable-software-rasterizer');
-      try { createWindow(); } catch { /* fatal */ }
+      try { createWindow(); } catch (fatalErr) {
+        console.error('Window creation failed fatally:', fatalErr);
+        dialog.showErrorBox('OmniEmu', 'Failed to create application window. The app will exit.');
+        app.quit();
+        return;
+      }
     }
 
     createTray();
@@ -232,4 +237,5 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   tray = null;
+  try { stopSyncthing(); } catch { /* ignore */ }
 });

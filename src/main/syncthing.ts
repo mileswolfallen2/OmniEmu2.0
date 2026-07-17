@@ -238,14 +238,16 @@ export async function installSyncthing(
 
 function downloadFile(
   url: string,
-  onProgress?: (received: number, total: number) => void
+  onProgress?: (received: number, total: number) => void,
+  redirects = 0
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
+    if (redirects > 10) { reject(new Error('Too many redirects')); return; }
     const https = require('https');
     const get = url.startsWith('https') ? https.get : http.get;
-    get(url, (res: any) => {
+    get(url, { timeout: 30000 }, (res: any) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        downloadFile(res.headers.location, onProgress).then(resolve, reject);
+        downloadFile(res.headers.location, onProgress, redirects + 1).then(resolve, reject);
         return;
       }
       if (res.statusCode !== 200) {

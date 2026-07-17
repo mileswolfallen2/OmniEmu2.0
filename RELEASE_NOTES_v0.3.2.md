@@ -20,6 +20,8 @@ Browse, back up, and delete game saves across all your emulators.
 - RetroArch saves with recursive core-directory scanning
 - Custom save directories per emulator
 - Backup saves before deleting
+- **Restore** — restore any previous backup with one click (new)
+- **Open Backup Folder** — jump straight to your backups on disk (new)
 
 ### New Emulators
 Five new emulators added to the library:
@@ -65,8 +67,11 @@ Visual theme picker with live color swatches:
 Organized emulator list with filter tabs:
 - **All** — every emulator, frontend, and decomp
 - **Emulators** — core emulators only (Dolphin, PCSX2, RetroArch, etc.)
-- **Frontends** — ES-DE, NeoStation, Pegasus, EmuBuddy
+- **Frontends** — ES-DE, NeoStation, Pegasus, EmuBuddy (shown only when Frontend Support is enabled)
 - **Decomps** — native PC ports (visible when Decomp Projects is on)
+
+### Beta Badges
+Beta and experimental emulators are now clearly labeled with a "Beta" badge in their card header. The following emulators are marked beta: ES-DE, NeoStation, EmuBuddy, Pegasus, xemu, Vita3K, Azahar, Project64, Mednafen.
 
 ### SteamGridDB Cover Art
 Search and set custom cover art from SteamGridDB's free API.
@@ -106,6 +111,20 @@ Redesigned top-bar navigation with full gamepad/controller support:
 - **BIOS folder scan** — `scanRoms()` now skips BIOS directories
 - **CSS accent colors** — replaced hardcoded colors with `color-mix()` using theme variables
 - **Duplicate CSS** — renamed `.platform-tag` conflict to `.platform-tag-accent`
+- **Frontend Support toggle** — now actually gates ES-DE, NeoStation, Pegasus, and EmuBuddy on/off in the Emulators page
+- **Beta Emulators toggle** — now actually hides/shows beta emulators in the Emulators page
+- **Decomp launch** — decomps now copy the ROM into the install directory and set execute permissions before launch
+- **Stuck loading screens** — all 5 main pages (Dashboard, Settings, Emulators, Save Manager, Library) now resolve loading state on errors instead of hanging forever
+- **setTimeout memory leaks** — fixed 12+ tracked-but-never-cleaned timers across ControllerPage, SaveManagerPage, UtilitiesPage, BiosCheckPanel, and useGamepadNav
+- **App startup crash** — `ensureRomsStructure()` now caught; fatal window creation shows error dialog instead of zombie process
+- **Syncthing quit cleanup** — Syncthing process now stopped on app quit
+- **execSync hangs** — path detection and version detection now have 3-5 second timeouts instead of blocking indefinitely
+- **BrowserWindow null crash** — removed unsafe `!` assertions on `fromWebContents()` calls in IPC handlers
+- **Download redirect loops** — both installer and Syncthing download functions now cap redirects at 10
+- **Download timeouts** — Syncthing binary download now has a 30s request timeout
+- **Cloud Sync type error** — added missing `uninstall` method to cloud IPC type definition
+- **Decomp tab rendering** — Decomps tab now correctly hides emulator cards and shows only decomp entries
+- **Build fix** — removed Linux ARM64 cross-compile from `build:all` (requires Linux host)
 
 ---
 
@@ -116,12 +135,13 @@ Redesigned top-bar navigation with full gamepad/controller support:
 
 ---
 
-## Supported Emulators (20 total)
-RetroArch, Dolphin, RPCS3, Cemu, xemu, Vita3K, Azahar, Eden, PPSSPP, DuckStation, PCSX2, Flycast, Yuzu (legacy), mGBA, MelonDS, Mednafen, ES-DE, NeoStation, Pegasus, EmuBuddy, and more.
+## Supported Emulators (20+ total)
+RetroArch, Dolphin, RPCS3, Cemu, xemu, Vita3K, Azahar, Eden, PPSSPP, DuckStation, PCSX2, Flycast, mGBA, MelonDS, Mednafen, Project64, Snes9x, Mesen2, MAME, ES-DE, NeoStation, Pegasus, EmuBuddy, and more.
 
 ---
-## 🙏 Thank You!
+
+## Thank You!
 
 Thanks for using OmniEmu! Every star on GitHub, every bug report, and every feature request helps us make this app better for everyone. If you run into any issues, please open an issue on [GitHub](https://github.com/mileswolfallen2/OmniEmu2.0) — we're always happy to help.
 
-Happy gaming! 🎮✨
+Happy gaming!

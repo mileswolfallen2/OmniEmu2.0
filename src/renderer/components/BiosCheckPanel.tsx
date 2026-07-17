@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 interface BiosEntry {
   emulators: string[];
@@ -23,6 +23,9 @@ export function BiosCheckPanel({ biosDir, onBiosDirChange }: Props) {
   const [results, setResults] = useState<BiosCheckResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [retroarchConfigMsg, setRetroarchConfigMsg] = useState('');
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { return () => { if (statusTimer.current) clearTimeout(statusTimer.current); }; }, []);
 
   const scan = useCallback(async (dir?: string) => {
     setLoading(true);
@@ -52,7 +55,8 @@ export function BiosCheckPanel({ biosDir, onBiosDirChange }: Props) {
     const configDir = homeDir + '/Library/Application Support/RetroArch';
     const ok = await window.omni.bios.configureRetroArch(configDir, biosDir);
     setRetroarchConfigMsg(ok ? 'RetroArch BIOS path updated' : 'Failed to update RetroArch config');
-    setTimeout(() => setRetroarchConfigMsg(''), 4000);
+    if (statusTimer.current) clearTimeout(statusTimer.current);
+    statusTimer.current = setTimeout(() => setRetroarchConfigMsg(''), 4000);
   };
 
   return (

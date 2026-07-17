@@ -169,6 +169,7 @@ export function useGamepadNav(onNavigate: (page: Page) => void, currentPage: Pag
     raf = requestAnimationFrame(poll);
     return () => {
       cancelAnimationFrame(raf);
+      if (legendTimer.current) clearTimeout(legendTimer.current);
     };
   }, [onNavigate, showLegendTemporarily]);
 

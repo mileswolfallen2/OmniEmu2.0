@@ -24,7 +24,8 @@ function tempName(suffix: string): string {
 
 function downloadFile(url: string, dest: string, onProgress: (pct: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
-    const doRequest = (currentUrl: string) => {
+    const doRequest = (currentUrl: string, redirects = 0) => {
+      if (redirects > 10) { reject(new Error('Too many redirects')); return; }
       const protocol = currentUrl.startsWith('https') ? httpsGet : httpGet;
       const opts: RequestOptions = {
         headers: { 'User-Agent': 'OmniEmu/0.3.2' },
@@ -33,7 +34,7 @@ function downloadFile(url: string, dest: string, onProgress: (pct: number) => vo
       protocol(currentUrl, opts, (response) => {
         const code = response.statusCode ?? 500;
         if (code >= 300 && code < 400 && response.headers.location) {
-          doRequest(response.headers.location);
+          doRequest(response.headers.location, redirects + 1);
           return;
         }
         if (code !== 200) {

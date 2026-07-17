@@ -15,6 +15,7 @@ import { applyCachedCovers } from './scraper';
 
 const platform = getPlatform();
 const arch = getArch();
+const FRONTEND_IDS = new Set(['esde', 'neostation', 'pegasus']);
 
 export const knownEmulators: EmulatorConfig[] = [
   {
@@ -482,6 +483,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://es-de.org/download/',
       darwin: 'https://es-de.org/download/',
@@ -524,6 +526,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://neostation.dev/downloads/',
       darwin: 'https://neostation.dev/downloads/',
@@ -565,6 +568,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://github.com/computerex/EmuBuddy',
       darwin: 'https://github.com/computerex/EmuBuddy',
@@ -607,6 +611,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://pegasus-frontend.org/download/',
       darwin: 'https://pegasus-frontend.org/download/',
@@ -683,6 +688,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://xemu.app/',
       darwin: 'https://xemu.app/',
@@ -727,6 +733,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://vita3k.org/',
       darwin: 'https://vita3k.org/',
@@ -765,6 +772,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://azahar-emu.org/',
       darwin: 'https://azahar-emu.org/',
@@ -791,6 +799,7 @@ export const knownEmulators: EmulatorConfig[] = [
       ],
     },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://www.pj64-emu.com/',
       darwin: 'https://www.pj64-emu.com/',
@@ -940,6 +949,7 @@ export const knownEmulators: EmulatorConfig[] = [
     },
     packageNames: { linux: 'mednafen', darwin: 'mednafen' },
     supported: true,
+    beta: true,
     websiteUrl: {
       win32: 'https://mednafen.github.io/',
       darwin: 'https://mednafen.github.io/',
@@ -967,7 +977,7 @@ function detectEmulatorPath(config: EmulatorConfig): string | undefined {
   if (existsSync(omniEmuDir)) {
     try {
       const cmd = isWindows() ? 'where' : 'which';
-      const result = execSync(`${cmd} ${config.id} 2>${isWindows() ? 'nul' : '/dev/null'}`)
+      const result = execSync(`${cmd} ${config.id} 2>${isWindows() ? 'nul' : '/dev/null'}`, { timeout: 5000 })
         .toString().trim();
       if (result) return result.split('\n')[0];
     } catch {
@@ -1130,7 +1140,8 @@ function detectVersion(binaryPath: string): string | undefined {
   if (isWindows()) {
     try {
       const out = execSync(
-        `powershell -NoProfile -Command "(Get-Item '${binaryPath}').VersionInfo.ProductVersion" 2>nul`
+        `powershell -NoProfile -Command "(Get-Item '${binaryPath}').VersionInfo.ProductVersion" 2>nul`,
+        { timeout: 3000 }
       ).toString().trim();
       if (out) return out;
     } catch { /* ignore */ }
@@ -1174,7 +1185,14 @@ export function checkEmulator(id: string): EmulatorState {
 }
 
 export function getAllEmulatorStates(): EmulatorState[] {
-  return knownEmulators.map((e) => checkEmulator(e.id));
+  const s = settings.get();
+  const includeFrontends = s.frontendSupport;
+  return knownEmulators
+    .filter((e) => {
+      if (!includeFrontends && (FRONTEND_IDS.has(e.id) || e.id === 'emubuddy')) return false;
+      return true;
+    })
+    .map((e) => checkEmulator(e.id));
 }
 
 export function launchEmulator(emulatorId: string): boolean {

@@ -20,7 +20,7 @@
     "package:win": "npm run build && npx electron-builder --win",
     "package:linux": "npm run build && npx electron-builder --linux",
     "package:all": "npm run build && npx electron-builder --mac --universal --win --linux",
-    "build:all": "npm run build && npx electron-builder --mac --universal && npx electron-builder --win --arm64 --linux --arm64 && npx electron-builder --win --x64 --linux --x64",
+    "build:all": "npm run build && npx electron-builder --mac --universal && npx electron-builder --win --arm64 && npx electron-builder --win --x64 --linux --x64",
     "typecheck": "tsc --noEmit -p tsconfig.main.json && tsc --noEmit -p tsconfig.renderer.json"
   },
   "author": "fedl team <help@fedl.site>",

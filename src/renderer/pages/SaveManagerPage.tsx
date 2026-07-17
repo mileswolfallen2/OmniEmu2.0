@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import type { GameEntry, EmulatorSaves, SaveEntry, SyncthingFolder } from '../../shared/types';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import type { GameEntry, EmulatorSaves, SaveEntry, SyncthingFolder, BackupEntry } from '../../shared/types';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -47,30 +47,41 @@ export function SaveManagerPage() {
   const [loading, setLoading] = useState(true);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
   const [status, setStatus] = useState('');
-  const [view, setView] = useState<'games' | 'emulators'>('games');
+  const [view, setView] = useState<'games' | 'emulators' | 'backups'>('games');
   const [syncFolders, setSyncFolders] = useState<SyncthingFolder[]>([]);
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [togglingSync, setTogglingSync] = useState<string | null>(null);
+  const [backups, setBackups] = useState<BackupEntry[]>([]);
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { return () => { if (statusTimer.current) clearTimeout(statusTimer.current); }; }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [settings, saves] = await Promise.all([
-      window.omni.settings.get(),
-      window.omni.saves.list(),
-    ]);
-    setAllSaves(saves);
-    if (settings.romsDirectory) {
-      const roms = await window.omni.roms.scan(settings.romsDirectory);
-      setGames(roms);
-    }
-    // Detect cloud sync: either the flag is set, or Syncthing is actually running
-    let cloudOk = !!settings.cloudSyncEnabled;
     try {
-      const cloudStatus = await window.omni.cloud.status();
-      setSyncFolders(cloudStatus.folders || []);
-      if (cloudStatus.running) cloudOk = true;
+      const [settings, saves] = await Promise.all([
+        window.omni.settings.get(),
+        window.omni.saves.list(),
+      ]);
+      setAllSaves(saves);
+      if (settings.romsDirectory) {
+        const roms = await window.omni.roms.scan(settings.romsDirectory);
+        setGames(roms);
+      }
+      // Detect cloud sync: either the flag is set, or Syncthing is actually running
+      let cloudOk = !!settings.cloudSyncEnabled;
+      try {
+        const cloudStatus = await window.omni.cloud.status();
+        setSyncFolders(cloudStatus.folders || []);
+        if (cloudStatus.running) cloudOk = true;
+      } catch { /* ignore */ }
+      setCloudEnabled(cloudOk);
+      try {
+        const backupList = await window.omni.saves.listBackups();
+        setBackups(backupList);
+      } catch { /* ignore */ }
     } catch { /* ignore */ }
-    setCloudEnabled(cloudOk);
     setLoading(false);
   }, []);
 
@@ -78,7 +89,8 @@ export function SaveManagerPage() {
 
   const showStatus = (msg: string) => {
     setStatus(msg);
-    setTimeout(() => setStatus(''), 3000);
+    if (statusTimer.current) clearTimeout(statusTimer.current);
+    statusTimer.current = setTimeout(() => setStatus(''), 3000);
   };
 
   const allSaveFiles = allSaves.flatMap(e => e.saves);
@@ -149,6 +161,27 @@ export function SaveManagerPage() {
     setTogglingSync(null);
   };
 
+  const handleRestore = async (backup: BackupEntry) => {
+    if (!confirm(`Restore ${backup.originalName}? This will overwrite the current save file.`)) return;
+    setRestoring(backup.backupPath);
+    try {
+      const ok = await window.omni.saves.restore(backup.backupPath);
+      if (ok) {
+        showStatus(`Restored ${backup.originalName}`);
+        loadData();
+      } else {
+        showStatus('Restore failed — could not find original save location');
+      }
+    } catch {
+      showStatus('Restore failed');
+    }
+    setRestoring(null);
+  };
+
+  const handleOpenBackupFolder = async () => {
+    try { await window.omni.saves.openBackupFolder(); } catch { /* ignore */ }
+  };
+
   return (
     <div>
       <div className="info-bar mb-4" style={{ justifyContent: 'space-between' }}>
@@ -165,6 +198,12 @@ export function SaveManagerPage() {
             onClick={() => setView('emulators')}
           >
             By Emulator
+          </button>
+          <button
+            className={`btn btn-sm ${view === 'backups' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setView('backups')}
+          >
+            Backups {backups.length > 0 && <span style={{ opacity: 0.7 }}>({backups.length})</span>}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={loadData}>
             Refresh
@@ -310,6 +349,64 @@ export function SaveManagerPage() {
             )}
           </div>
         ))
+      )}
+
+      {!loading && view === 'backups' && (
+        <div>
+          <div className="info-bar mb-4" style={{ justifyContent: 'space-between' }}>
+            <span>{backups.length} backup{backups.length !== 1 ? 's' : ''}</span>
+            <button className="btn btn-secondary btn-sm" onClick={handleOpenBackupFolder}>
+              Open Backup Folder
+            </button>
+          </div>
+
+          {backups.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📁</div>
+              <h3>No backups yet</h3>
+              <p>Click "Backup" next to any save file to create a backup.</p>
+            </div>
+          ) : (
+            <div className="card">
+              <div style={{ padding: 12 }}>
+                {backups.map((backup) => (
+                  <div
+                    key={backup.backupPath}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      marginBottom: 4,
+                      background: 'var(--bg-tertiary)',
+                    }}
+                  >
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>📦</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {backup.originalName}
+                      </div>
+                      <div className="text-sm text-muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {formatDate(backup.backupTime)} · {formatSize(backup.fileSize)}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={restoring === backup.backupPath}
+                        onClick={() => handleRestore(backup)}
+                      >
+                        {restoring === backup.backupPath ? 'Restoring...' : 'Restore'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

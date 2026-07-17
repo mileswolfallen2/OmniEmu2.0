@@ -19,20 +19,28 @@ export function LibraryPage() {
   const [selectedGame, setSelectedGame] = useState<GameEntry | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      const settings = await window.omni.settings.get();
-      setDecompProjects(!!settings.decompProjects);
-      if (settings.romsDirectory) {
-        setRomsDir(settings.romsDirectory);
-        setLoading(true);
-        const results = await window.omni.roms.scan(settings.romsDirectory);
-        setGames(await scrapeMissingArt(results));
-        setLoading(false);
-      }
-      // Load installed decomps
-      const decompStates = await window.omni.decomps.states();
-      setDecompGames(decompStates.filter(d => d.installed));
+      try {
+        const settings = await window.omni.settings.get();
+        if (cancelled) return;
+        setDecompProjects(!!settings.decompProjects);
+        if (settings.romsDirectory) {
+          setRomsDir(settings.romsDirectory);
+          setLoading(true);
+          const results = await window.omni.roms.scan(settings.romsDirectory);
+          if (cancelled) return;
+          setGames(await scrapeMissingArt(results));
+          setLoading(false);
+        }
+        // Load installed decomps
+        const decompStates = await window.omni.decomps.states();
+        if (cancelled) return;
+        setDecompGames(decompStates.filter(d => d.installed));
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
     })();
+    return () => { cancelled = true; };
   }, []);
 
   const scrapeMissingArt = async (list: GameEntry[]): Promise<GameEntry[]> => {
@@ -52,9 +60,11 @@ export function LibraryPage() {
   const scanDirectory = useCallback(async (dir: string) => {
     setRomsDir(dir);
     setLoading(true);
-    await window.omni.settings.save({ romsDirectory: dir });
-    const results = await window.omni.roms.scan(dir);
-    setGames(await scrapeMissingArt(results));
+    try {
+      await window.omni.settings.save({ romsDirectory: dir });
+      const results = await window.omni.roms.scan(dir);
+      setGames(await scrapeMissingArt(results));
+    } catch { /* ignore */ }
     setLoading(false);
   }, []);
 
@@ -65,12 +75,12 @@ export function LibraryPage() {
   }, [scanDirectory]);
 
   const handleLaunch = async (game: GameEntry) => {
-    await window.omni.game.launch(game.emulatorId, game.romPath);
+    try { await window.omni.game.launch(game.emulatorId, game.romPath); } catch { /* ignore */ }
   };
 
   const handleDecompLaunch = async (decomp: DecompState) => {
     if (decomp.romPath) {
-      await window.omni.decomps.launch(decomp.config.id);
+      try { await window.omni.decomps.launch(decomp.config.id); } catch { /* ignore */ }
     }
   };
 
@@ -123,7 +133,7 @@ export function LibraryPage() {
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn btn-secondary btn-sm" onClick={async () => {
                 setLoading(true);
-                setGames(await scrapeMissingArt(games));
+                try { setGames(await scrapeMissingArt(games)); } catch { /* ignore */ }
                 setLoading(false);
               }}>
                 Scrape All Art

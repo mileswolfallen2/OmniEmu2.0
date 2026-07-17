@@ -8,18 +8,23 @@ export function Dashboard({ onNavigate }: { onNavigate?: (tab: 'dashboard' | 'em
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
-      const [states, info, recentGames] = await Promise.all([
-        window.omni.emulators.states(),
-        window.omni.system.info(),
-        window.omni.game.recent(),
-      ]);
-      setEmulators(states);
-      setSystem(info);
-      setRecent(recentGames || []);
-      setLoading(false);
+      try {
+        const [states, info, recentGames] = await Promise.all([
+          window.omni.emulators.states(),
+          window.omni.system.info(),
+          window.omni.game.recent(),
+        ]);
+        if (cancelled) return;
+        setEmulators(states);
+        setSystem(info);
+        setRecent(recentGames || []);
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
     }
     load();
+    return () => { cancelled = true; };
   }, []);
 
   const installed = emulators.filter((e) => e.installed).length;
@@ -103,9 +108,11 @@ export function Dashboard({ onNavigate }: { onNavigate?: (tab: 'dashboard' | 'em
                 tabIndex={0}
                 role="button"
                 onClick={async () => {
-                  await window.omni.game.launch(game.emulatorId, game.romPath);
-                  const updated = await window.omni.game.recent();
-                  setRecent(updated || []);
+                  try {
+                    await window.omni.game.launch(game.emulatorId, game.romPath);
+                    const updated = await window.omni.game.recent();
+                    setRecent(updated || []);
+                  } catch { /* ignore */ }
                 }}
               >
                 <div className="game-card-cover">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface FilterPreset {
   id: string;
@@ -24,6 +24,25 @@ export function UtilitiesPage() {
   const [filterResult, setFilterResult] = useState<{ message: string; ok: boolean } | null>(null);
   const [applyingAll, setApplyingAll] = useState(false);
   const [applyAllResult, setApplyAllResult] = useState<string | null>(null);
+  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearTimer = (ref: ReturnType<typeof setTimeout>) => {
+    clearTimeout(ref);
+    const idx = timerRefs.current.indexOf(ref);
+    if (idx >= 0) timerRefs.current.splice(idx, 1);
+  };
+
+  const addTimer = (ms: number, cb: () => void): ReturnType<typeof setTimeout> => {
+    const t = setTimeout(() => {
+      const idx = timerRefs.current.indexOf(t);
+      if (idx >= 0) timerRefs.current.splice(idx, 1);
+      cb();
+    }, ms);
+    timerRefs.current.push(t);
+    return t;
+  };
+
+  useEffect(() => { return () => { timerRefs.current.forEach(clearTimeout); }; }, []);
 
   useEffect(() => {
     window.omni.settings.get().then((s) => {
@@ -31,14 +50,14 @@ export function UtilitiesPage() {
       setRaPassword(s.retroAchievementsPassword || '');
       setRaApiKey(s.retroAchievementsApiKey || '');
       setSgdbKey(s.steamGridDbApiKey || '');
-    });
-    window.omni.filters.list().then(setFilterPresets);
+    }).catch(() => { /* ignore */ });
+    window.omni.filters.list().then(setFilterPresets).catch(() => { /* ignore */ });
   }, []);
 
   const handleRecreate = async () => {
     setRegenerating(true);
     await window.omni.utilities.regenerateRomsStructure();
-    setTimeout(() => setRegenerating(false), 1500);
+    addTimer(1500, () => setRegenerating(false));
   };
 
   const handleAutoApply = async () => {
@@ -68,7 +87,7 @@ export function UtilitiesPage() {
     } catch {
       setFilterResult({ message: 'Failed to apply filter', ok: false });
     }
-    setTimeout(() => { setApplyingFilter(null); setFilterResult(null); }, 2500);
+    addTimer(2500, () => { setApplyingFilter(null); setFilterResult(null); });
   };
 
   const handleApplyAll = async () => {
@@ -82,7 +101,7 @@ export function UtilitiesPage() {
     } catch {
       setApplyAllResult('Failed to apply settings');
     }
-    setTimeout(() => { setApplyingAll(false); setApplyAllResult(null); }, 3000);
+    addTimer(3000, () => { setApplyingAll(false); setApplyAllResult(null); });
   };
 
   const handleRaSave = async () => {
@@ -99,7 +118,7 @@ export function UtilitiesPage() {
     } catch {
       setRaResults({});
     }
-    setTimeout(() => setSaving(false), 500);
+    addTimer(500, () => setSaving(false));
   };
 
   const emuLabels: Record<string, string> = {
@@ -376,7 +395,7 @@ export function UtilitiesPage() {
               if (!window.confirm('Are you sure you want to clear all game covers? This cannot be undone.')) return;
               setClearingCovers(true);
               await window.omni.game.clearCoverCache();
-              setTimeout(() => setClearingCovers(false), 1500);
+              addTimer(1500, () => setClearingCovers(false));
             }}
           >
             {clearingCovers ? 'Cleared!' : 'Clear Covers'}

@@ -11,6 +11,7 @@ import type {
   InstallProgress,
   ConfigPreset,
   EmulatorSaves,
+  BackupEntry,
   SyncthingStatus,
   SyncthingPendingDevice,
   SyncthingPendingFolder,
@@ -89,6 +90,9 @@ declare global {
         list: () => Promise<EmulatorSaves[]>;
         delete: (filePath: string) => Promise<boolean>;
         backup: (filePath: string) => Promise<string | null>;
+        listBackups: () => Promise<BackupEntry[]>;
+        restore: (backupPath: string) => Promise<boolean>;
+        openBackupFolder: () => Promise<boolean>;
         openFolder: (folderPath: string) => Promise<boolean>;
         selectDirectory: () => Promise<string | null>;
         setDirectory: (emulatorId: string, dir: string) => Promise<boolean>;
@@ -124,6 +128,7 @@ declare global {
         guessPath: (label: string) => Promise<string | null>;
         emulatorDirs: () => Promise<{ id: string; name: string; saves: string | null }[]>;
         toggleFolderSync: (emuId: string, sync: boolean) => Promise<boolean>;
+        uninstall: () => Promise<boolean>;
         onInstallProgress: (cb: (progress: { stage: string; percent: number; message: string }) => void) => () => void;
       };
       app: {

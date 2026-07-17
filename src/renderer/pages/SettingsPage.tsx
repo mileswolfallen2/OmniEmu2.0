@@ -67,41 +67,46 @@ export function SettingsPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     Promise.all([
       window.omni.settings.get(),
       window.omni.emulators.systemAssignments(),
       window.omni.emulators.list(),
     ]).then(([s, assignments, emulators]) => {
+      if (cancelled) return;
       setSettings(s);
       setSystemAssignments(assignments);
       const nameMap: Record<string, string> = {};
       for (const e of emulators) nameMap[e.id] = e.name;
       setEmuNameMap(nameMap);
-    });
+    }).catch(() => { if (!cancelled) setSettings({} as AppSettings); });
+    return () => { cancelled = true; };
   }, []);
 
   const update = async (partial: Partial<AppSettings>) => {
     if (!settings) return;
     setSaving(true);
-    const updated = await window.omni.settings.save(partial);
-    setSettings(updated);
+    try {
+      const updated = await window.omni.settings.save(partial);
+      setSettings(updated);
+    } catch { /* ignore */ }
     setSaving(false);
   };
 
   const handleCheckUpdates = async () => {
     setChecking(true);
     setUpdateInfo(null);
-    await window.omni.updates.check();
+    try { await window.omni.updates.check(); } catch { setChecking(false); }
   };
 
   const handleDownloadUpdate = async () => {
     setDownloading(true);
     setDownloadProgress(0);
-    await window.omni.updates.download();
+    try { await window.omni.updates.download(); } catch { setDownloading(false); }
   };
 
   const handleQuitAndInstall = async () => {
-    await window.omni.updates.quitAndInstall();
+    try { await window.omni.updates.quitAndInstall(); } catch { /* app is restarting */ }
   };
 
   if (!settings || !systemAssignments) {
@@ -407,7 +412,7 @@ export function SettingsPage() {
           onClick={async () => {
             if (!confirm('This will delete all emulators, settings, and app data. Your ROMs are safe. Continue?')) return;
             if (!confirm('Are you really sure? This cannot be undone.')) return;
-            await window.omni.app.nukeData();
+            try { await window.omni.app.nukeData(); } catch { /* ignore */ }
             window.location.reload();
           }}
         >

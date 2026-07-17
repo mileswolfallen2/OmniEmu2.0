@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, readdirSync, writeFileSync } from 'fs';
-import { join, extname } from 'path';
+import { existsSync, mkdirSync, readFileSync, rmSync, readdirSync, writeFileSync, copyFileSync } from 'fs';
+import { join, extname, basename } from 'path';
 import { app, shell } from 'electron';
-import { exec } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { DecompProject, DecompState, Platform } from '../shared/types';
 import { getPlatform } from './platform';
 import { settings } from './settings';
@@ -442,8 +442,30 @@ export function launchDecomp(id: string): boolean {
   const state = checkDecomp(id);
   if (!state.installed || !state.path) return false;
 
-  const child = exec(`"${state.path}"`, { cwd: getDecompDir(id) });
-  if (child) child.unref();
+  const installDir = getDecompDir(id);
+
+  // Ensure the executable has execute permission on macOS/Linux
+  if (platform !== 'win32') {
+    try { execSync(`chmod +x "${state.path}"`, { timeout: 3000 }); } catch { /* ignore */ }
+  }
+
+  // Copy ROM into the install dir so the port can find it
+  if (state.romPath && existsSync(state.romPath)) {
+    const romBase = basename(state.romPath);
+    const dest = join(installDir, romBase);
+    if (state.romPath !== dest) {
+      try { copyFileSync(state.romPath, dest); } catch { /* ignore */ }
+    }
+  }
+
+  try {
+    const child = spawn(state.path, [], { cwd: installDir, detached: true, stdio: 'ignore' });
+    child.on('error', (err) => { console.error(`Decomp launch error (${id}):`, err.message); });
+    child.unref();
+  } catch (err: any) {
+    console.error(`Decomp spawn failed (${id}):`, err.message);
+    return false;
+  }
 
   return true;
 }
@@ -632,9 +654,6 @@ async function extractArchive(
   onProgress: (p: DecompInstallProgress) => void,
   decompId: string,
 ): Promise<void> {
-  const { execSync } = require('child_process');
-  const platform = process.platform;
-
   try {
     if (archiveName.endsWith('.zip')) {
       onProgress({ decompId, stage: 'extracting', percent: 75, message: 'Extracting zip archive...' });

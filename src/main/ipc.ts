@@ -35,7 +35,7 @@ import { addRecentGame, parseGameTitle, buildScrapeTitle, findValidThumbnail, ca
 import { getGameAchievements, raSupportedPlatforms } from './ra';
 import { FILTER_PRESETS, applyFilterPreset } from './filters';
 import { scanBiosDirectory, getKnownBiosList, getDefaultBiosDir, updateRetroarchBiosPath } from './bios';
-import { listAllSaves, deleteSave, backupSave } from './saveManager';
+import { listAllSaves, deleteSave, backupSave, listBackups, restoreBackup, openBackupFolder } from './saveManager';
 import {
   installSyncthing,
   startSyncthing,
@@ -61,7 +61,11 @@ export function registerIpcHandlers(): void {
   // Emulators
   ipcMain.handle('emulators:list', () => {
     const plat = getPlatform();
+    const s = settings.get();
+    const includeFrontends = s.frontendSupport;
+    const FRONTEND_IDS = new Set(['esde', 'neostation', 'pegasus']);
     return knownEmulators.filter(e => {
+      if (!includeFrontends && (FRONTEND_IDS.has(e.id) || e.id === 'emubuddy')) return false;
       const hasDownload = e.downloads?.[plat] && e.downloads[plat]!.length > 0;
       const hasPackage = !!e.packageNames?.[plat];
       return hasDownload || hasPackage;
@@ -97,32 +101,38 @@ export function registerIpcHandlers(): void {
 
       // ES-DE on macOS: manual install (DMG requires license acceptance in Finder)
       if (emulatorId === 'esde' && getPlatform() === 'darwin') {
-        const result = await dialog.showMessageBox(BrowserWindow.fromWebContents(event.sender)!, {
-          type: 'info',
-          title: 'Install ES-DE',
-          message: 'ES-DE must be installed manually on macOS',
-          detail: 'OmniEmu will open the ES-DE download page. Please download and install ES-DE, then return to OmniEmu and click Configure.',
-          buttons: ['Open Download Page', 'Cancel'],
-          defaultId: 0,
-        });
-        if (result.response === 0) {
-          shell.openExternal('https://es-de.org/#Download');
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win) {
+          const result = await dialog.showMessageBox(win, {
+            type: 'info',
+            title: 'Install ES-DE',
+            message: 'ES-DE must be installed manually on macOS',
+            detail: 'OmniEmu will open the ES-DE download page. Please download and install ES-DE, then return to OmniEmu and click Configure.',
+            buttons: ['Open Download Page', 'Cancel'],
+            defaultId: 0,
+          });
+          if (result.response === 0) {
+            shell.openExternal('https://es-de.org/#Download');
+          }
         }
         return checkEmulator(emulatorId);
       }
 
       // NeoStation on macOS: manual install (DMG requires license acceptance in Finder)
       if (emulatorId === 'neostation' && getPlatform() === 'darwin') {
-        const result = await dialog.showMessageBox(BrowserWindow.fromWebContents(event.sender)!, {
-          type: 'info',
-          title: 'Install NeoStation',
-          message: 'NeoStation must be installed manually on macOS',
-          detail: 'OmniEmu will open the NeoStation download page. Please download and install NeoStation, then return to OmniEmu and click Configure.',
-          buttons: ['Open Download Page', 'Cancel'],
-          defaultId: 0,
-        });
-        if (result.response === 0) {
-          shell.openExternal('https://neostation.dev/downloads/');
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win) {
+          const result = await dialog.showMessageBox(win, {
+            type: 'info',
+            title: 'Install NeoStation',
+            message: 'NeoStation must be installed manually on macOS',
+            detail: 'OmniEmu will open the NeoStation download page. Please download and install NeoStation, then return to OmniEmu and click Configure.',
+            buttons: ['Open Download Page', 'Cancel'],
+            defaultId: 0,
+          });
+          if (result.response === 0) {
+            shell.openExternal('https://neostation.dev/downloads/');
+          }
         }
         return checkEmulator(emulatorId);
       }
@@ -457,6 +467,12 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('saves:delete', (_event, filePath: string) => deleteSave(filePath));
 
   ipcMain.handle('saves:backup', (_event, filePath: string) => backupSave(filePath));
+
+  ipcMain.handle('saves:list-backups', () => listBackups());
+
+  ipcMain.handle('saves:restore', (_event, backupPath: string) => restoreBackup(backupPath));
+
+  ipcMain.handle('saves:open-backup-folder', () => openBackupFolder());
 
   ipcMain.handle('saves:open-folder', async (_event, folderPath: string) => {
     shell.showItemInFolder(folderPath);

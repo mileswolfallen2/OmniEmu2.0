@@ -15,6 +15,7 @@ export function EmulatorsPage() {
   const [states, setStates] = useState<EmulatorState[]>([]);
   const [decompStates, setDecompStates] = useState<DecompState[]>([]);
   const [betaFeatures, setBetaFeatures] = useState(false);
+  const [frontendSupport, setFrontendSupport] = useState(false);
   const [decompProjects, setDecompProjects] = useState(false);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<Record<string, InstallProgress>>({});
@@ -25,15 +26,18 @@ export function EmulatorsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [emuResult, decompResult, settings] = await Promise.all([
-      window.omni.emulators.states(),
-      window.omni.decomps.states(),
-      window.omni.settings.get(),
-    ]);
-    setStates(emuResult);
-    setDecompStates(decompResult);
-    setBetaFeatures(!!settings.betaFeatures);
-    setDecompProjects(!!settings.decompProjects);
+    try {
+      const [emuResult, decompResult, settings] = await Promise.all([
+        window.omni.emulators.states(),
+        window.omni.decomps.states(),
+        window.omni.settings.get(),
+      ]);
+      setStates(emuResult);
+      setDecompStates(decompResult);
+      setBetaFeatures(!!settings.betaFeatures);
+      setFrontendSupport(!!settings.frontendSupport);
+      setDecompProjects(!!settings.decompProjects);
+    } catch { /* ignore */ }
     setLoading(false);
   }, []);
 
@@ -73,7 +77,8 @@ export function EmulatorsPage() {
       ...prev,
       [id]: { emulatorId: id, stage: 'downloading', percent: 0, message: 'Starting...' },
     }));
-    await window.omni.emulators.install(id);
+    try { await window.omni.emulators.install(id); } catch { /* ignore */ }
+    setActioning(null);
     await load();
   };
 
@@ -83,10 +88,13 @@ export function EmulatorsPage() {
       ...prev,
       [id]: { emulatorId: id, stage: 'downloading', percent: 0, message: 'Starting...' },
     }));
-    const result = await window.omni.emulators.install(id);
-    if (result.installed && result.path) {
-      await window.omni.emulators.configure(id, result.path);
-    }
+    try {
+      const result = await window.omni.emulators.install(id);
+      if (result.installed && result.path) {
+        await window.omni.emulators.configure(id, result.path);
+      }
+    } catch { /* ignore */ }
+    setActioning(null);
     await load();
   };
 
@@ -100,7 +108,7 @@ export function EmulatorsPage() {
         stage: 'configuring', percent: 0, message: 'Applying recommended settings...',
       },
     }));
-    await window.omni.emulators.configure(state.config.id, state.path);
+    try { await window.omni.emulators.configure(state.config.id, state.path); } catch { /* ignore */ }
     setProgress((prev) => ({
       ...prev,
       [state.config.id]: {
@@ -115,20 +123,20 @@ export function EmulatorsPage() {
 
   const handleOpen = async (id: string) => {
     setActioning(id);
-    await window.omni.emulators.launch(id);
+    try { await window.omni.emulators.launch(id); } catch { /* ignore */ }
     setActioning(null);
   };
 
   const handleUninstall = async (id: string) => {
     if (!confirm(`Uninstall ${id} and remove all its files?`)) return;
     setActioning(id);
-    await window.omni.emulators.uninstall(id);
+    try { await window.omni.emulators.uninstall(id); } catch { /* ignore */ }
     setActioning(null);
     await load();
   };
 
   const handleOpenWebsite = async (id: string) => {
-    await window.omni.emulators.openWebsite(id);
+    try { await window.omni.emulators.openWebsite(id); } catch { /* ignore */ }
   };
 
   // ── Decomp handlers ───────────────────────────────────────
@@ -139,31 +147,33 @@ export function EmulatorsPage() {
       ...prev,
       [id]: { stage: 'downloading', percent: 0, message: 'Starting...' },
     }));
-    await window.omni.decomps.install(id);
+    try { await window.omni.decomps.install(id); } catch { /* ignore */ }
     await load();
   };
 
   const handleDecompUninstall = async (id: string) => {
     if (!confirm(`Uninstall this port and remove all its files?`)) return;
     setActioning(id);
-    await window.omni.decomps.uninstall(id);
+    try { await window.omni.decomps.uninstall(id); } catch { /* ignore */ }
     setActioning(null);
     await load();
   };
 
   const handleDecompLaunch = async (id: string) => {
     setActioning(id);
-    await window.omni.decomps.launch(id);
+    try { await window.omni.decomps.launch(id); } catch { /* ignore */ }
     setActioning(null);
   };
 
   const handleDecompSelectRom = async (id: string) => {
-    const result = await window.omni.decomps.selectRom(id);
-    if (result.state) {
-      setDecompStates((prev) =>
-        prev.map((d) => (d.config.id === id ? result.state : d))
-      );
-    }
+    try {
+      const result = await window.omni.decomps.selectRom(id);
+      if (result.state) {
+        setDecompStates((prev) =>
+          prev.map((d) => (d.config.id === id ? result.state : d))
+        );
+      }
+    } catch { /* ignore */ }
   };
 
   const handleRefresh = () => load();
@@ -174,16 +184,23 @@ export function EmulatorsPage() {
 
   const currentProgress = (id: string) => progress[id];
 
-  const emulators = states.filter((s) => s.config.id !== 'emubuddy' && !FRONTEND_IDS.has(s.config.id));
-  const frontends = states.filter((s) => FRONTEND_IDS.has(s.config.id) || s.config.id === 'emubuddy');
-  const installedCount = states.filter((s) => s.installed).length;
-  const configuredCount = states.filter((s) => s.configured).length;
+  const allEmulators = states.filter((s) => s.config.id !== 'emubuddy' && !FRONTEND_IDS.has(s.config.id));
+  const allFrontends = states.filter((s) => FRONTEND_IDS.has(s.config.id) || s.config.id === 'emubuddy');
+
+  const emulators = betaFeatures ? allEmulators : allEmulators.filter((s) => !s.config.beta);
+  const frontends = frontendSupport ? allFrontends : [];
+
+  const visibleStates = [...emulators, ...frontends];
+  const installedCount = visibleStates.filter((s) => s.installed).length;
+  const configuredCount = visibleStates.filter((s) => s.configured).length;
 
   const filteredStates = activeTab === 'emulators'
     ? emulators
     : activeTab === 'frontends'
     ? frontends
-    : states;
+    : activeTab === 'decomps'
+    ? []
+    : visibleStates;
 
   const showDecomps = decompProjects && (activeTab === 'all' || activeTab === 'decomps');
 
@@ -208,7 +225,7 @@ export function EmulatorsPage() {
           onClick={() => setActiveTab('all')}
         >
           All
-          <span className="page-tab-count">{states.length + (showDecomps ? decompStates.length : 0)}</span>
+          <span className="page-tab-count">{visibleStates.length + (showDecomps ? decompStates.length : 0)}</span>
         </button>
         <button
           className={`page-tab ${activeTab === 'emulators' ? 'active' : ''}`}
@@ -217,13 +234,15 @@ export function EmulatorsPage() {
           Emulators
           <span className="page-tab-count">{emulators.length}</span>
         </button>
-        <button
-          className={`page-tab ${activeTab === 'frontends' ? 'active' : ''}`}
-          onClick={() => setActiveTab('frontends')}
-        >
-          Frontends
-          <span className="page-tab-count">{frontends.length}</span>
-        </button>
+        {frontendSupport && (
+          <button
+            className={`page-tab ${activeTab === 'frontends' ? 'active' : ''}`}
+            onClick={() => setActiveTab('frontends')}
+          >
+            Frontends
+            <span className="page-tab-count">{frontends.length}</span>
+          </button>
+        )}
         {decompProjects && (
           <button
             className={`page-tab ${activeTab === 'decomps' ? 'active' : ''}`}
@@ -244,7 +263,7 @@ export function EmulatorsPage() {
           return (
             <div className="card" key={state.config.id}>
               <div className="card-header">
-                <h3>{state.config.name}</h3>
+                <h3>{state.config.name} {state.config.beta && <span className="badge-beta" style={{ marginLeft: 6, fontSize: 10, verticalAlign: 'middle' }}>Beta</span>}</h3>
                 <span
                   className={`badge ${
                     !state.config.supported
@@ -407,13 +426,15 @@ export function EmulatorsPage() {
 
       {/* ── Decompilations Section ───────────────────────── */}
       {showDecomps && (<>
-      <div style={{ marginTop: 40 }}>
-        <div className="info-bar" style={{ marginBottom: 16 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 600 }}>Decompilations <span className="badge-beta">Beta</span></h2>
-          <span className="text-sm text-muted">
-            Native PC ports built from reverse-engineered source code — bring your own ROM
-          </span>
-        </div>
+      <div style={{ marginTop: activeTab === 'decomps' ? 0 : 40 }}>
+        {activeTab !== 'decomps' && (
+          <div className="info-bar" style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600 }}>Decompilations <span className="badge-beta">Beta</span></h2>
+            <span className="text-sm text-muted">
+              Native PC ports built from reverse-engineered source code — bring your own ROM
+            </span>
+          </div>
+        )}
 
         <div className="card-grid">
           {decompStates.map((decomp) => {
